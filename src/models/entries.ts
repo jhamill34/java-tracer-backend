@@ -1,3 +1,5 @@
+import { generateMethodId } from 'src/util/identifiers'
+
 export interface Identifiable {
     id(): string
 }
@@ -15,16 +17,12 @@ export class MethodEntry implements Identifiable {
         readonly lineNumber: number,
     ) {}
     id(): string {
-        let id = this.className
-        if (this.modifiers.includes('static')) {
-            id += '#'
-        } else {
-            id += '.'
-        }
-
-        id += this.name + this.descriptor
-
-        return id
+        return generateMethodId(
+            this.className,
+            this.name,
+            this.descriptor,
+            this.modifiers.includes('static'),
+        )
     }
 }
 
@@ -37,5 +35,23 @@ export class InheritEntry implements Identifiable {
 
     id(): string {
         return this.className
+    }
+}
+
+export enum MethodCallEntryType {
+    ENTER,
+    EXIT,
+}
+
+export class MethodCallEntry implements Identifiable {
+    constructor(
+        readonly type: MethodCallEntryType,
+        readonly thread: string,
+        readonly time: number,
+        readonly method: MethodEntry,
+    ) {}
+
+    id(): string {
+        return '[' + this.thread + ']' + this.method.id()
     }
 }

@@ -11,14 +11,17 @@ import {
     DefinedCallGraph,
     MethodCallDefinitionMetadata,
     MethodCallMetadata,
+    PackageTrie,
 } from 'src/models/graphs'
 import { GraphImpl } from 'src/util/graph'
+import { TrieImpl } from 'src/util/trie'
 
 @Injectable()
 export class GraphService {
     private readonly classGraph: ClassGraph
     private readonly definedCallGraph: DefinedCallGraph
     private readonly callGraph: CallGraph
+    private readonly packageTrie: PackageTrie
 
     constructor() {
         this.classGraph = new GraphImpl<ClassDefinition, ClassEdgeMetadata>()
@@ -26,8 +29,8 @@ export class GraphService {
             MethodDefinition,
             MethodCallDefinitionMetadata
         >()
-
         this.callGraph = new GraphImpl<MethodCall, MethodCallMetadata>()
+        this.packageTrie = new TrieImpl<string>()
     }
 
     /**
@@ -51,5 +54,9 @@ export class GraphService {
      */
     getCallGraph(): CallGraph {
         return this.callGraph
+    }
+
+    getPackageGraph(): PackageTrie {
+        return this.packageTrie
     }
 }

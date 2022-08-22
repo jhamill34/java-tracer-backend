@@ -19,14 +19,12 @@ export class MethodDefinition {
 export class ClassDefinition {
     constructor(
         readonly name: string,
-        readonly pkg: string = '',
         readonly methods: Set<string> = new Set<string>(),
     ) {}
 
     toJSON(): { [key: string]: any } {
         return {
             name: this.name,
-            package: this.pkg,
             methods: Array.from(this.methods),
         }
     }

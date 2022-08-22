@@ -1,4 +1,5 @@
 import { Graph } from 'src/util/graph'
+import { Trie } from 'src/util/trie'
 import {
     ClassDefinition,
     MethodCall,
@@ -30,3 +31,10 @@ export interface MethodCallMetadata {
 }
 
 export type CallGraph = Graph<MethodCall, MethodCallMetadata>
+
+export type PackageTrie = Trie<string>
+
+export interface PackageResponse {
+    className: string
+    package: string
+}

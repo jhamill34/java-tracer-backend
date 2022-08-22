@@ -1,7 +1,6 @@
 import { CallEntry, MethodEntry, InheritEntry } from 'src/models/entries'
 import { GraphService } from './graph.service'
 import { Injectable } from '@nestjs/common'
-import { Parser } from './interfaces'
 import { ClassRelationship } from 'src/models/graphs'
 import { ClassDefinition, MethodDefinition } from 'src/models/class-definition'
 
@@ -10,7 +9,7 @@ const METHOD_KEY = '<METHOD>'
 const INHERIT_KEY = '<INHERIT>'
 
 @Injectable()
-export class CompileLogService implements Parser<void> {
+export class CompileLogService {
     constructor(private readonly graphService: GraphService) {}
 
     extract(buffer: Buffer): void {
