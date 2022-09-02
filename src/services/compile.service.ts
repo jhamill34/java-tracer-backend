@@ -1,115 +1,270 @@
-import { CallEntry, MethodEntry, InheritEntry } from 'src/models/entries'
-import { GraphService } from './graph.service'
-import { Injectable } from '@nestjs/common'
-import { ClassRelationship } from 'src/models/graphs'
-import { ClassDefinition, MethodDefinition } from 'src/models/class-definition'
+import { Injectable, Logger } from '@nestjs/common'
+import { ClassDto } from 'src/dto/class.dto'
+import { TokenDto } from 'src/dto/token.dto'
+import { FieldEntity } from 'src/entities/field.entity'
+import { InstructionEntity } from 'src/entities/instruction.entity'
+import { KnownClassEntity } from 'src/entities/knownClass.entity'
+import { LocalVariableEntity } from 'src/entities/localVariable.entity'
+import { MethodEntity } from 'src/entities/method.entity'
+import { UnknownClassEntity } from 'src/entities/unknownClass.entity'
+import { ClassService } from './class.service'
+import { InstructionService } from './instruction.service'
+import { LocalVariableService } from './localVariable.service'
+import { ReferenceService } from './reference.service'
 
-const CALL_KEY = '<CALL>'
-const METHOD_KEY = '<METHOD>'
-const INHERIT_KEY = '<INHERIT>'
-
+export interface Value<T> {
+    value: T
+}
 @Injectable()
-export class CompileLogService {
-    constructor(private readonly graphService: GraphService) {}
+export class CompileService {
+    private readonly logger = new Logger('CompileService')
 
-    extract(buffer: Buffer): void {
-        buffer
+    constructor(
+        private readonly classService: ClassService,
+        private readonly instructionService: InstructionService,
+        private readonly variableService: LocalVariableService,
+        private readonly referenceService: ReferenceService,
+    ) {}
+
+    async extract(buffer: Buffer, token: TokenDto): Promise<void> {
+        const lines = buffer
             .toString()
             .split('\n')
-            .forEach((line) => this.handleEntry(line))
-    }
+            .filter((line) => line.trim().length > 0)
 
-    private handleEntry(line: string): void {
-        const [type, serializedEntry] = line.split(' ')
+        const classes: KnownClassEntity[] = []
+        const classDtos: ClassDto[] = []
+        for (const line of lines) {
+            const json = JSON.parse(line)
+            if (isClassDto(json)) {
+                const classEntity = await this.handleLine(json.value, token)
+                classes.push(classEntity)
+                classDtos.push(json.value)
+            }
+        }
 
-        switch (type) {
-            case CALL_KEY:
-                this.handleCallEntry(parseCallEntry(serializedEntry))
-                break
-            case METHOD_KEY:
-                this.handleMethodEntry(parseMethodEntry(serializedEntry))
-                break
-            case INHERIT_KEY:
-                this.handleInheritEntry(parseInheritanceEntry(serializedEntry))
-                break
+        for (const idx in classes) {
+            await this.handleRelationships(classes[idx], classDtos[idx], token)
         }
     }
 
-    private handleMethodEntry(methodEntry: MethodEntry): void {
-        const methodGraph = this.graphService.getDefinedCallGraph()
-        methodGraph.add(
-            methodEntry.id(),
-            new MethodDefinition(
-                methodEntry.name,
-                methodEntry.className,
-                methodEntry.descriptor,
-                methodEntry.modifiers,
-            ),
-        )
+    private async handleLine(
+        classDto: ClassDto,
+        jobToken: TokenDto,
+    ): Promise<KnownClassEntity> {
+        const { token } = jobToken
+        const classEntity = new KnownClassEntity()
+        classEntity.name = classDto.name
+        classEntity.hash = classDto.hash
+        classEntity.packageName = classDto.packageName
+        classEntity.signature = classDto.signature
+        classEntity.modifiers = classDto.modifiers
 
-        const classGraph = this.graphService.getClassGraph()
-        if (classGraph.contains(methodEntry.className)) {
-            classGraph
-                .getNode(methodEntry.className)
-                .methods.add(methodEntry.id())
-        } else {
-            const classDef = new ClassDefinition(methodEntry.className)
-            classDef.methods.add(methodEntry.id())
-            classGraph.add(methodEntry.className, classDef)
+        const methods: MethodEntity[] = []
+        for (const m of classDto.methods) {
+            const method = new MethodEntity()
+
+            method.name = m.name
+            method.descriptor = m.descriptor
+            method.signature = m.signature
+            method.modifiers = m.modifiers
+            method.parameters = m.parameters
+
+            const variables: LocalVariableEntity[] = []
+            for (const v of m.localVariables) {
+                const variable = new LocalVariableEntity()
+                variable.name = v.name
+                variable.descriptor = v.descriptor
+                variable.signature = v.signature
+                variable.jobToken = token
+                await this.variableService.save(variable)
+
+                variables.push(variable)
+            }
+            method.localVariables = variables
+
+            const instructions: InstructionEntity[] = []
+            for (const i of m.instructions) {
+                const instruction = new InstructionEntity()
+                instruction.localVariables = i.validLocalVariables.map((v) => {
+                    const variable = new LocalVariableEntity()
+                    const { descriptor, name, signature } = m.localVariables[v]
+                    variable.descriptor = descriptor
+                    variable.name = name
+                    variable.signature = signature
+                    return variable
+                })
+                instruction.opCode = i.opCode
+                instruction.lineNumber = i.lineNumber
+                instruction.stack = i.stack
+                instruction.jobToken = token
+
+                await this.instructionService.save(instruction)
+
+                instructions.push(instruction)
+            }
+
+            for (const idx in m.instructions) {
+                if (
+                    m.instructions[idx] !== undefined &&
+                    m.instructions[idx] !== null &&
+                    m.instructions[idx].branches !== undefined &&
+                    m.instructions[idx].branches !== null
+                ) {
+                    const branches = m.instructions[idx].branches.map(
+                        (b) => instructions[b],
+                    )
+
+                    for (const branch of branches) {
+                        await this.instructionService.saveEdge(
+                            instructions[idx],
+                            branch,
+                        )
+                    }
+                }
+            }
+
+            method.instructions = instructions
+            method.jobToken = token
+            await this.referenceService.saveMethod(method)
+
+            methods.push(method)
+        }
+        classEntity.methods = methods
+
+        const fields: FieldEntity[] = []
+        for (const f of classDto.fields) {
+            const field = new FieldEntity()
+            field.name = f.name
+            field.descriptor = f.descriptor
+            field.signature = f.signature
+            field.initialValue = f.initialValue
+            field.modifiers = f.modifiers
+            field.jobToken = token
+
+            await this.referenceService.saveField(field)
+
+            fields.push(field)
+        }
+        classEntity.fields = fields
+        classEntity.jobToken = token
+
+        await this.classService.saveKnown(classEntity)
+
+        return classEntity
+    }
+
+    private async handleRelationships(
+        classEntity: KnownClassEntity,
+        classDto: ClassDto,
+        jobToken: TokenDto,
+    ): Promise<void> {
+        const { token } = jobToken
+        if (classDto.superName !== undefined && classDto.superName !== null) {
+            const knownSuperClass = await this.classService.findKnownByName(
+                classDto.superName,
+                token,
+            )
+
+            if (knownSuperClass !== null) {
+                await this.classService.saveSuperClass(
+                    classEntity,
+                    knownSuperClass,
+                )
+            } else {
+                let unknownSuperClass =
+                    await this.classService.findUnknownByName(
+                        classDto.superName,
+                        token,
+                    )
+
+                if (unknownSuperClass === null) {
+                    unknownSuperClass = new UnknownClassEntity()
+                    unknownSuperClass.name = classDto.superName
+                    unknownSuperClass.jobToken = token
+                    await this.classService.saveUnknown(unknownSuperClass)
+                }
+
+                await this.classService.saveSuperClass(
+                    classEntity,
+                    unknownSuperClass,
+                )
+            }
+        }
+
+        if (classDto.interfaces !== undefined && classDto.interfaces !== null) {
+            for (const interfaceName of classDto.interfaces) {
+                const knownInterface = await this.classService.findKnownByName(
+                    interfaceName,
+                    token,
+                )
+
+                if (knownInterface !== null) {
+                    await this.classService.saveInterface(
+                        classEntity,
+                        knownInterface,
+                    )
+                } else {
+                    let unknownInterface =
+                        await this.classService.findUnknownByName(
+                            interfaceName,
+                            token,
+                        )
+
+                    if (unknownInterface === null) {
+                        unknownInterface = new UnknownClassEntity()
+                        unknownInterface.name = interfaceName
+                        unknownInterface.jobToken = token
+                        await this.classService.saveUnknown(unknownInterface)
+                    }
+
+                    await this.classService.saveInterface(
+                        classEntity,
+                        unknownInterface,
+                    )
+                }
+            }
+        }
+
+        for (const m in classDto.methods) {
+            const methodDto = classDto.methods[m]
+            const methodEntity = classEntity.methods[m]
+            for (const i in methodDto.instructions) {
+                const instructionDto = methodDto.instructions[i]
+                const instructionEntity = methodEntity.instructions[i]
+
+                if (
+                    instructionDto.fieldAccess !== undefined &&
+                    instructionDto.fieldAccess !== null
+                ) {
+                    const existingField =
+                        await this.referenceService.findOrCreateField(
+                            instructionDto.fieldAccess,
+                            [178, 179].includes(instructionDto.opCode),
+                            token,
+                        )
+                    instructionEntity.reference = existingField
+                    instructionEntity.jobToken = token
+                    await this.instructionService.save(instructionEntity)
+                } else if (
+                    instructionDto.fieldAccess !== undefined &&
+                    instructionDto.fieldAccess !== null
+                ) {
+                    const existingMethod =
+                        await this.referenceService.findOrCreateMethod(
+                            instructionDto.methodCall,
+                            [178, 179].includes(instructionDto.opCode),
+                            token,
+                        )
+                    instructionEntity.reference = existingMethod
+                    instructionEntity.jobToken = token
+                    await this.instructionService.save(instructionEntity)
+                }
+            }
         }
     }
-
-    private handleCallEntry(callEntry: CallEntry): void {
-        this.handleMethodEntry(callEntry.caller)
-        this.handleMethodEntry(callEntry.called)
-
-        const methodGraph = this.graphService.getDefinedCallGraph()
-        methodGraph.connect(callEntry.caller.id(), callEntry.called.id(), {
-            linenumber: callEntry.caller.lineNumber,
-        })
-    }
-
-    private handleInheritEntry(inheritEntry: InheritEntry): void {
-        const classGraph = this.graphService.getClassGraph()
-
-        classGraph.add(
-            inheritEntry.id(),
-            new ClassDefinition(inheritEntry.id()),
-        )
-
-        classGraph.connect(inheritEntry.id(), inheritEntry.superClass, {
-            relationship: ClassRelationship.EXTENDS,
-        })
-        inheritEntry.interfaces.forEach((i) => {
-            classGraph.connect(inheritEntry.id(), i, {
-                relationship: ClassRelationship.IMPLEMENTS,
-            })
-        })
-    }
 }
 
-function parseMethodEntry(line: string): MethodEntry {
-    const [name, descriptor, className, modifierString, lineNumberString] =
-        line.split(',')
-
-    const lineNumber = parseInt(lineNumberString)
-    const modifiers =
-        modifierString.trim().length === 0 ? [] : modifierString.split('|')
-
-    return new MethodEntry(name, descriptor, className, modifiers, lineNumber)
-}
-
-function parseCallEntry(line: string): CallEntry {
-    const [caller, called] = line.split('=>')
-
-    return new CallEntry(parseMethodEntry(caller), parseMethodEntry(called))
-}
-
-function parseInheritanceEntry(line: string): InheritEntry {
-    const [className, superClass, interfaceString] = line.split(',')
-
-    const interfaces =
-        interfaceString.trim().length === 0 ? [] : interfaceString.split('|')
-
-    return new InheritEntry(className, superClass, interfaces)
+function isClassDto(json: any): json is Value<ClassDto> {
+    return json && json.value && json.value.name && json.value.methods
 }

@@ -120,22 +120,23 @@ export function createTraversal<N, E>(
     }
 }
 
-export async function search<N, E>(
+export async function search<N, E, R>(
     type: TraversalType,
     graph: Graph<N, E>,
     startingId: string,
-    predicate: (node: N) => boolean,
-): Promise<boolean> {
-    return new Promise<boolean>((resolve, reject) => {
+    predicate: (node: N) => R,
+): Promise<R | null> {
+    return new Promise<R>((resolve, reject) => {
         const traversal = createTraversal({ type, graph })
         traversal
             .on('node', (node) => {
-                if (predicate(node)) {
-                    resolve(true)
+                const result = predicate(node)
+                if (result !== null) {
+                    resolve(result)
                 }
             })
             .on('complete', () => {
-                resolve(false)
+                resolve(null)
             })
             .on('error', reject)
             .start(startingId)

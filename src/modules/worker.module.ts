@@ -16,7 +16,6 @@ import { ReferenceEntity } from 'src/entities/reference.entity'
 import { UnknownClassEntity } from 'src/entities/unknownClass.entity'
 import { UserEntity } from 'src/entities/user.entity'
 import { ClassModule } from './class.module'
-import { ControllersModule } from './controllers.module'
 import { FileModule } from './file.module'
 import { ProviderModule } from './provider.module'
 import { UsersModule } from './users.module'
@@ -57,8 +56,7 @@ import { UsersModule } from './users.module'
         ClassModule,
         FileModule,
         UsersModule,
-        ControllersModule,
         ProviderModule,
     ],
 })
-export class AppModule {}
+export class WorkerModule {}

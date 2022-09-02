@@ -1,20 +1,19 @@
+import { BullModule } from '@nestjs/bull'
 import { Module } from '@nestjs/common'
-import { FilesController } from 'src/controllers/files.controller'
-import { GraphController } from 'src/controllers/graph.controller'
-import { ClasspathService } from 'src/services/classpath.service'
-import { CompileLogService } from 'src/services/compile.service'
+import { TypeOrmModule } from '@nestjs/typeorm'
+import { JobEntity } from 'src/entities/job.entity'
 import { FileService } from 'src/services/file.service'
-import { GraphService } from 'src/services/graph.service'
-import { RuntimeLogService } from 'src/services/runtime.service'
+import { ClassModule } from './class.module'
 
 @Module({
-    controllers: [FilesController, GraphController],
-    providers: [
-        FileService,
-        CompileLogService,
-        RuntimeLogService,
-        ClasspathService,
-        GraphService,
+    imports: [
+        BullModule.registerQueue({
+            name: 'uploads',
+        }),
+        TypeOrmModule.forFeature([JobEntity]),
+        ClassModule,
     ],
+    providers: [FileService],
+    exports: [FileService],
 })
 export class FileModule {}
