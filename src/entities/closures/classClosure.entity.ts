@@ -7,9 +7,13 @@ import { AbstractRecord } from '../abstractRecord.entity'
 export class ClassClosureEntity extends AbstractRecord {
     static MODEL_NAME = 'class_closure_entity'
 
-    @ManyToOne(() => AbstractClassEntity)
+    @ManyToOne(() => AbstractClassEntity, {
+        createForeignKeyConstraints: false,
+    })
     ancestor: AbstractClassEntity
 
-    @ManyToOne(() => AbstractClassEntity)
+    @ManyToOne(() => AbstractClassEntity, {
+        createForeignKeyConstraints: false,
+    })
     child: AbstractClassEntity
 }

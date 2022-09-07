@@ -15,10 +15,6 @@ import { MethodEntity } from 'src/entities/method.entity'
 import { ReferenceEntity } from 'src/entities/reference.entity'
 import { UnknownClassEntity } from 'src/entities/unknownClass.entity'
 import { UserEntity } from 'src/entities/user.entity'
-import { ClassModule } from './class.module'
-import { ControllersModule } from './controllers.module'
-import { FileModule } from './file.module'
-import { ProviderModule } from './provider.module'
 import { UsersModule } from './users.module'
 
 @Module({
@@ -30,8 +26,11 @@ import { UsersModule } from './users.module'
             },
         }),
         TypeOrmModule.forRoot({
-            type: 'better-sqlite3',
-            database: 'sqlite.db',
+            type: 'postgres',
+            host: 'localhost',
+            username: 'joshrasm',
+            database: 'javatrace',
+            port: 5432,
             entities: [
                 ClassClosureEntity,
                 ExtendsEntity,
@@ -54,11 +53,7 @@ import { UsersModule } from './users.module'
             synchronize: true,
             // logging: true,
         }),
-        ClassModule,
-        FileModule,
         UsersModule,
-        ControllersModule,
-        ProviderModule,
     ],
 })
 export class AppModule {}

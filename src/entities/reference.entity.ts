@@ -20,9 +20,13 @@ export abstract class ReferenceEntity extends AbstractRecord {
     @Column('simple-array')
     modifiers: string[]
 
-    @OneToMany(() => InstructionEntity, (edge) => edge.reference)
+    @OneToMany(() => InstructionEntity, (edge) => edge.reference, {
+        createForeignKeyConstraints: false,
+    })
     invokedBy: InstructionEntity[]
 
-    @ManyToOne(() => AbstractClassEntity)
+    @ManyToOne(() => AbstractClassEntity, {
+        createForeignKeyConstraints: false,
+    })
     class: AbstractClassEntity
 }

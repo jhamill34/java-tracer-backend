@@ -22,21 +22,33 @@ export class KnownClassEntity extends AbstractClassEntity {
     @Column('simple-array')
     modifiers: string[]
 
-    @OneToMany(() => MethodEntity, (method) => method.class)
+    @OneToMany(() => MethodEntity, (method) => method.class, {
+        createForeignKeyConstraints: false,
+    })
     methods: MethodEntity[]
 
-    @OneToMany(() => FieldEntity, (field) => field.class)
+    @OneToMany(() => FieldEntity, (field) => field.class, {
+        createForeignKeyConstraints: false,
+    })
     fields: FieldEntity[]
 
-    @OneToMany(() => ExtendsEntity, (klass) => klass.child)
+    @OneToMany(() => ExtendsEntity, (klass) => klass.child, {
+        createForeignKeyConstraints: false,
+    })
     superClasses: ExtendsEntity[]
 
-    @OneToMany(() => ExtendsEntity, (klass) => klass.ancestor)
+    @OneToMany(() => ExtendsEntity, (klass) => klass.ancestor, {
+        createForeignKeyConstraints: false,
+    })
     subClasses: ExtendsEntity[]
 
-    @OneToMany(() => ImplementsEntity, (klass) => klass.child)
+    @OneToMany(() => ImplementsEntity, (klass) => klass.child, {
+        createForeignKeyConstraints: false,
+    })
     interfaces: ImplementsEntity[]
 
-    @OneToMany(() => ImplementsEntity, (klass) => klass.ancestor)
+    @OneToMany(() => ImplementsEntity, (klass) => klass.ancestor, {
+        createForeignKeyConstraints: false,
+    })
     implementors: ImplementsEntity[]
 }

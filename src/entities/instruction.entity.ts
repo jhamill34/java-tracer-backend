@@ -16,31 +16,46 @@ import { ReferenceEntity } from './reference.entity'
 export class InstructionEntity extends AbstractRecord {
     static MODEL_NAME = 'instruction_entity'
 
-    @ManyToOne(() => MethodEntity, (method) => method.instructions)
-    owner: MethodEntity
-
     @Column()
     opCode: number
 
     @Column()
     lineNumber: number
 
-    @ManyToOne(() => ReferenceEntity, (ref) => ref.invokedBy)
+    @ManyToOne(() => ReferenceEntity, (ref) => ref.invokedBy, {
+        createForeignKeyConstraints: false,
+    })
     reference?: ReferenceEntity
 
-    @ManyToOne(() => MethodEntity, (method) => method.instructions)
+    @ManyToOne(() => MethodEntity, (method) => method.instructions, {
+        createForeignKeyConstraints: false,
+    })
     invokedBy: MethodEntity
-
-    @ManyToMany(() => LocalVariableEntity)
-    @JoinTable()
-    localVariables: LocalVariableEntity[]
 
     @Column('simple-array')
     stack: string[]
 
-    @OneToMany(() => InstructionClosureEntity, (closure) => closure.ancestor)
+    @OneToMany(() => InstructionClosureEntity, (closure) => closure.ancestor, {
+        createForeignKeyConstraints: false,
+    })
     ancestors: InstructionEntity[]
 
-    @OneToMany(() => InstructionClosureEntity, (closure) => closure.child)
+    @OneToMany(() => InstructionClosureEntity, (closure) => closure.child, {
+        createForeignKeyConstraints: false,
+    })
     children: InstructionEntity[]
+
+    @OneToMany(
+        () => LocalVariableEntity,
+        (variable) => variable.startInstruction,
+        { createForeignKeyConstraints: false },
+    )
+    enteringVariables: LocalVariableEntity[]
+
+    @OneToMany(
+        () => LocalVariableEntity,
+        (variable) => variable.endInstruction,
+        { createForeignKeyConstraints: false },
+    )
+    exitingVariables: LocalVariableEntity[]
 }

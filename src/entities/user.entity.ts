@@ -17,10 +17,10 @@ export class UserEntity {
     @Column()
     password: string
 
-    @Column()
+    @Column({ type: 'bigint' })
     createdAt: number
 
-    @Column()
+    @Column({ type: 'bigint' })
     updatedAt: number
 
     @BeforeInsert()

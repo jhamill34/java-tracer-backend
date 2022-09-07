@@ -1,4 +1,4 @@
-import { Column, Entity, Index, ManyToMany, ManyToOne } from 'typeorm'
+import { Column, Entity, Index, ManyToOne } from 'typeorm'
 import { AbstractRecord } from './abstractRecord.entity'
 import { InstructionEntity } from './instruction.entity'
 import { MethodEntity } from './method.entity'
@@ -17,9 +17,22 @@ export class LocalVariableEntity extends AbstractRecord {
     @Column({ nullable: true })
     signature?: string
 
-    @ManyToOne(() => MethodEntity, (method) => method.localVariables)
+    @ManyToOne(() => MethodEntity, (method) => method.localVariables, {
+        createForeignKeyConstraints: false,
+    })
     method: MethodEntity
 
-    @ManyToMany(() => InstructionEntity)
-    instructions: InstructionEntity[]
+    @ManyToOne(
+        () => InstructionEntity,
+        (instruction) => instruction.enteringVariables,
+        { createForeignKeyConstraints: false },
+    )
+    startInstruction: InstructionEntity
+
+    @ManyToOne(
+        () => InstructionEntity,
+        (instruction) => instruction.exitingVariables,
+        { createForeignKeyConstraints: false },
+    )
+    endInstruction: InstructionEntity
 }

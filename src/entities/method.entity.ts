@@ -8,9 +8,13 @@ export class MethodEntity extends ReferenceEntity {
     @Column('simple-array', { nullable: true })
     parameters?: string[]
 
-    @OneToMany(() => InstructionEntity, (edge) => edge.invokedBy)
+    @OneToMany(() => InstructionEntity, (edge) => edge.invokedBy, {
+        createForeignKeyConstraints: false,
+    })
     instructions: InstructionEntity[]
 
-    @OneToMany(() => LocalVariableEntity, (variable) => variable.method)
+    @OneToMany(() => LocalVariableEntity, (variable) => variable.method, {
+        createForeignKeyConstraints: false,
+    })
     localVariables: LocalVariableEntity[]
 }

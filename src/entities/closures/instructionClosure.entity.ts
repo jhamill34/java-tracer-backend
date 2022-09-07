@@ -6,9 +6,13 @@ import { InstructionEntity } from '../instruction.entity'
 export class InstructionClosureEntity extends AbstractRecord {
     static MODEL_NAME = 'instruction_closure_entity'
 
-    @ManyToOne(() => InstructionEntity, (instr) => instr.ancestors)
+    @ManyToOne(() => InstructionEntity, (instr) => instr.ancestors, {
+        createForeignKeyConstraints: false,
+    })
     ancestor: InstructionEntity
 
-    @ManyToOne(() => InstructionEntity, (instr) => instr.children)
+    @ManyToOne(() => InstructionEntity, (instr) => instr.children, {
+        createForeignKeyConstraints: false,
+    })
     child: InstructionEntity
 }

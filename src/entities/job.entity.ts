@@ -1,4 +1,10 @@
-import { Column, Entity, PrimaryColumn } from 'typeorm'
+import {
+    BeforeInsert,
+    BeforeUpdate,
+    Column,
+    Entity,
+    PrimaryColumn,
+} from 'typeorm'
 
 @Entity()
 export class JobEntity {
@@ -10,15 +16,23 @@ export class JobEntity {
     @Column()
     status: string
 
-    @Column()
-    requested: number
-
-    @Column({ nullable: true })
-    started: number
-
-    @Column({ nullable: true })
-    completed: number
-
     @Column({ nullable: true })
     error: string
+
+    @Column({ type: 'bigint' })
+    createdAt: number
+
+    @Column({ type: 'bigint' })
+    updatedAt: number
+
+    @BeforeInsert()
+    setCreatedDate() {
+        this.createdAt = Date.now()
+        this.updatedAt = Date.now()
+    }
+
+    @BeforeUpdate()
+    updateDate() {
+        this.updatedAt = Date.now()
+    }
 }

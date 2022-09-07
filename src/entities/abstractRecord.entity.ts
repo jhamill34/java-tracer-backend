@@ -1,33 +1,12 @@
-import {
-    BeforeInsert,
-    BeforeUpdate,
-    Column,
-    Index,
-    PrimaryGeneratedColumn,
-} from 'typeorm'
+import { Column, PrimaryColumn } from 'typeorm'
 
-@Index(['jobToken'])
 export abstract class AbstractRecord {
-    @PrimaryGeneratedColumn()
-    id: number
+    @PrimaryColumn()
+    id: string
 
-    @Column()
+    @Column({ type: 'bigint' })
     createdAt: number
 
     @Column()
-    updatedAt: number
-
-    @Column()
     jobToken: string
-
-    @BeforeInsert()
-    setCreatedDate() {
-        this.createdAt = Date.now()
-        this.updatedAt = Date.now()
-    }
-
-    @BeforeUpdate()
-    updateDate() {
-        this.updatedAt = Date.now()
-    }
 }
