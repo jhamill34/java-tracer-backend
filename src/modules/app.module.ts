@@ -1,4 +1,3 @@
-import { BullModule } from '@nestjs/bull'
 import { Module } from '@nestjs/common'
 import { TypeOrmModule } from '@nestjs/typeorm'
 import { AbstractClassEntity } from 'src/entities/abstractClass.entity'
@@ -19,12 +18,6 @@ import { UsersModule } from './users.module'
 
 @Module({
     imports: [
-        BullModule.forRoot({
-            redis: {
-                host: 'localhost',
-                port: 6379,
-            },
-        }),
         TypeOrmModule.forRoot({
             type: 'postgres',
             host: 'localhost',
@@ -50,7 +43,7 @@ import { UsersModule } from './users.module'
 
                 UserEntity,
             ],
-            synchronize: true,
+            // synchronize: true,
             // logging: true,
         }),
         UsersModule,
