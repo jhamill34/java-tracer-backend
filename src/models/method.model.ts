@@ -15,7 +15,7 @@ export class MethodModel {
     @Field()
     descriptor: string
 
-    @Field(() => ClassModel)
+    @Field(() => ClassModel, { nullable: true })
     owner?: ClassModel
 
     @Field({ nullable: true })

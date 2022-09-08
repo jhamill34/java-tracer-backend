@@ -1,5 +1,6 @@
 import { Args, Parent, ResolveField, Resolver } from '@nestjs/graphql'
 import { InstructionEntity } from 'src/entities/instruction.entity'
+import { ClassModel } from 'src/models/class.model'
 import {
     InstructionModel,
     InstructionModelConnection,
@@ -13,6 +14,7 @@ import {
 import { InstructionService } from 'src/services/instruction.service'
 import { LocalVariableService } from 'src/services/localVariable.service'
 import { ReferenceEntityService } from 'src/services/referenceEntity.service'
+import { OpCode } from 'src/util/opcodeUtil'
 
 @Resolver(() => MethodModel)
 export class MethodResolver {
@@ -64,11 +66,14 @@ export class MethodResolver {
         @Parent() method: MethodModel,
         @Args('first', { defaultValue: 10 }) first: number,
         @Args('after', { defaultValue: '' }) after: string,
+        @Args('opCodes', { defaultValue: [], type: () => [OpCode] })
+        opCodes: OpCode[],
     ): Promise<InstructionModelConnection> {
         const instructions = await this.instructionService.findAllByMethodId(
             method.id,
             first + 1,
             after,
+            opCodes,
         )
 
         if (instructions.length === 0) {
@@ -101,7 +106,7 @@ export class MethodResolver {
     }
 
     @ResolveField()
-    async owner(@Parent() method: MethodModel) {
+    async owner(@Parent() method: MethodModel): Promise<ClassModel> {
         return await this.referenceService.findOwnerForMethodId(method.id)
     }
 }

@@ -4,7 +4,8 @@ import { InstructionClosureEntity } from 'src/entities/closures/instructionClosu
 import { InstructionEntity } from 'src/entities/instruction.entity'
 import { LocalVariableEntity } from 'src/entities/localVariable.entity'
 import { ReferenceEntity } from 'src/entities/reference.entity'
-import { MoreThan, Repository } from 'typeorm'
+import { OpCode } from 'src/util/opcodeUtil'
+import { In, MoreThan, MoreThanOrEqual, Repository } from 'typeorm'
 
 @Injectable()
 export class InstructionService {
@@ -89,11 +90,13 @@ export class InstructionService {
         methodId: string,
         limit: number,
         token = '',
+        opCodes: OpCode[]
     ): Promise<InstructionEntity[]> {
         const instr = this.instructionRepo.find({
             where: {
                 invokedById: methodId,
                 id: MoreThan(token),
+                opCode: opCodes.length === 0 ? MoreThanOrEqual(OpCode.UNKNOWN) : In(opCodes)
             },
             take: limit,
             order: {

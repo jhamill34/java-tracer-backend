@@ -39,7 +39,7 @@ import { UsersModule } from './users.module'
                     host: 'localhost',
                     port: 6379,
                 },
-                duration: 60000,
+                duration: 120000, // 2 minutes
             },
             entities: [
                 ClassClosureEntity,

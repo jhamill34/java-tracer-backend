@@ -19,7 +19,7 @@ export class FieldModel {
     @Field(() => [String], { nullable: true })
     modifiers?: string[]
 
-    @Field(() => ClassModel)
+    @Field(() => ClassModel, { nullable: true })
     owner?: ClassModel
 }
 
