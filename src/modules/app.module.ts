@@ -1,4 +1,6 @@
+import { ApolloDriver, ApolloDriverConfig } from '@nestjs/apollo'
 import { Module } from '@nestjs/common'
+import { GraphQLModule } from '@nestjs/graphql'
 import { TypeOrmModule } from '@nestjs/typeorm'
 import { AbstractClassEntity } from 'src/entities/abstractClass.entity'
 import { ClassClosureEntity } from 'src/entities/closures/classClosure.entity'
@@ -14,10 +16,17 @@ import { MethodEntity } from 'src/entities/method.entity'
 import { ReferenceEntity } from 'src/entities/reference.entity'
 import { UnknownClassEntity } from 'src/entities/unknownClass.entity'
 import { UserEntity } from 'src/entities/user.entity'
+import { ClassModule } from './class.module'
 import { UsersModule } from './users.module'
 
 @Module({
     imports: [
+        GraphQLModule.forRoot<ApolloDriverConfig>({
+            driver: ApolloDriver,
+            debug: false,
+            playground: true,
+            autoSchemaFile: true,
+        }),
         TypeOrmModule.forRoot({
             type: 'postgres',
             host: 'localhost',
@@ -43,10 +52,11 @@ import { UsersModule } from './users.module'
 
                 UserEntity,
             ],
-            // synchronize: true,
-            // logging: true,
+            synchronize: true,
+            logging: true,
         }),
         UsersModule,
+        ClassModule,
     ],
 })
 export class AppModule {}

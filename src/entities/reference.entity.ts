@@ -1,4 +1,11 @@
-import { Column, Entity, ManyToOne, OneToMany, TableInheritance } from 'typeorm'
+import {
+    Column,
+    Entity,
+    Index,
+    ManyToOne,
+    OneToMany,
+    TableInheritance,
+} from 'typeorm'
 import { AbstractClassEntity } from './abstractClass.entity'
 import { AbstractRecord } from './abstractRecord.entity'
 import { InstructionEntity } from './instruction.entity'
@@ -19,6 +26,10 @@ export abstract class ReferenceEntity extends AbstractRecord {
 
     @Column('simple-array')
     modifiers: string[]
+
+    @Column()
+    @Index()
+    classId: string
 
     @OneToMany(() => InstructionEntity, (edge) => edge.reference, {
         createForeignKeyConstraints: false,

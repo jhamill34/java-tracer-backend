@@ -17,6 +17,18 @@ export class LocalVariableEntity extends AbstractRecord {
     @Column({ nullable: true })
     signature?: string
 
+    @Column()
+    @Index()
+    methodId: string
+
+    @Column()
+    @Index()
+    startInstructionId: string
+
+    @Column()
+    @Index()
+    endInstructionId: string
+
     @ManyToOne(() => MethodEntity, (method) => method.localVariables, {
         createForeignKeyConstraints: false,
     })

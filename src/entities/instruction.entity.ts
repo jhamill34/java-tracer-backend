@@ -1,11 +1,4 @@
-import {
-    Column,
-    Entity,
-    JoinTable,
-    ManyToMany,
-    ManyToOne,
-    OneToMany,
-} from 'typeorm'
+import { Column, Entity, Index, ManyToOne, OneToMany } from 'typeorm'
 import { AbstractRecord } from './abstractRecord.entity'
 import { InstructionClosureEntity } from './closures/instructionClosure.entity'
 import { LocalVariableEntity } from './localVariable.entity'
@@ -21,6 +14,14 @@ export class InstructionEntity extends AbstractRecord {
 
     @Column()
     lineNumber: number
+
+    @Column({ nullable: true })
+    @Index()
+    referenceId?: string
+
+    @Column({ nullable: true })
+    @Index()
+    invokedById?: string
 
     @ManyToOne(() => ReferenceEntity, (ref) => ref.invokedBy, {
         createForeignKeyConstraints: false,
