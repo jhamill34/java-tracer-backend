@@ -24,6 +24,7 @@ export class LocalVariableService {
             order: {
                 id: 'asc',
             },
+            cache: true,
         })
         if (vars === undefined || vars === null) {
             return []

@@ -4,8 +4,7 @@ import { InstructionClosureEntity } from 'src/entities/closures/instructionClosu
 import { InstructionEntity } from 'src/entities/instruction.entity'
 import { LocalVariableEntity } from 'src/entities/localVariable.entity'
 import { ReferenceEntity } from 'src/entities/reference.entity'
-import { OpCode } from 'src/util/opcodeUtil'
-import { In, MoreThan, MoreThanOrEqual, Repository } from 'typeorm'
+import { MoreThan, Repository } from 'typeorm'
 
 @Injectable()
 export class InstructionService {
@@ -18,36 +17,51 @@ export class InstructionService {
 
     async findEnteringVariablesById(
         id: string,
+        limit: number,
+        token: string,
     ): Promise<LocalVariableEntity[]> {
         const instr = await this.instructionRepo.findOne({
-            where: { id },
+            where: { id, enteringVariables: { id: MoreThan(token) } },
             relations: { enteringVariables: true },
+            order: {
+                enteringVariables: { id: 'asc' },
+            },
+            cache: true,
         })
 
         if (instr === undefined || instr === null) {
             return null
         }
 
-        return instr.enteringVariables
+        return instr.enteringVariables.slice(0, limit)
     }
 
-    async findExitingVariablesById(id: string): Promise<LocalVariableEntity[]> {
+    async findExitingVariablesById(
+        id: string,
+        limit: number,
+        token: string,
+    ): Promise<LocalVariableEntity[]> {
         const instr = await this.instructionRepo.findOne({
-            where: { id },
+            where: { id, exitingVariables: { id: MoreThan(token) } },
             relations: { exitingVariables: true },
+            order: {
+                exitingVariables: { id: 'asc' },
+            },
+            cache: true,
         })
 
         if (instr === undefined || instr === null) {
             return null
         }
 
-        return instr.exitingVariables
+        return instr.exitingVariables.slice(0, limit)
     }
 
     async findInvokedById(id: string): Promise<ReferenceEntity> {
         const instr = await this.instructionRepo.findOne({
             where: { id },
             relations: { invokedBy: true },
+            cache: true,
         })
 
         if (instr === undefined || instr === null) {
@@ -61,6 +75,7 @@ export class InstructionService {
         const instr = await this.instructionRepo.findOne({
             where: { id },
             relations: { reference: true },
+            cache: true,
         })
 
         if (instr === undefined || instr === null) {
@@ -74,21 +89,17 @@ export class InstructionService {
         methodId: string,
         limit: number,
         token = '',
-        opCodes: OpCode[] = [],
     ): Promise<InstructionEntity[]> {
         const instr = this.instructionRepo.find({
             where: {
                 invokedById: methodId,
                 id: MoreThan(token),
-                opCode:
-                    opCodes.length > 0
-                        ? In(opCodes)
-                        : MoreThanOrEqual(OpCode.UNKNOWN),
             },
             take: limit,
             order: {
                 id: 'asc',
             },
+            cache: true,
         })
 
         if (instr === undefined || instr === null) {
@@ -103,6 +114,7 @@ export class InstructionService {
             where: {
                 ancestorId: instrId,
             },
+            cache: true,
         })
 
         if (edges === undefined || edges === null) {
@@ -117,6 +129,7 @@ export class InstructionService {
             where: {
                 childId: instrId,
             },
+            cache: true,
         })
 
         if (edges === undefined || edges === null) {

@@ -18,6 +18,7 @@ export class ReferenceEntityService {
         const method = await this.methodRepo.findOne({
             where: { id },
             relations: { class: true },
+            cache: true,
         })
 
         if (method !== undefined && method !== null) {
@@ -31,6 +32,7 @@ export class ReferenceEntityService {
         const method = await this.fieldRepo.findOne({
             where: { id },
             relations: { class: true },
+            cache: true,
         })
 
         if (method !== undefined && method !== null) {
@@ -54,6 +56,7 @@ export class ReferenceEntityService {
             order: {
                 id: 'asc',
             },
+            cache: true,
         })
     }
 
@@ -68,6 +71,7 @@ export class ReferenceEntityService {
                 id: MoreThan(token),
             },
             take: limit,
+            cache: true,
         })
     }
 }

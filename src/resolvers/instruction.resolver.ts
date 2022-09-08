@@ -1,8 +1,11 @@
-import { Parent, ResolveField, Resolver } from '@nestjs/graphql'
+import { Args, Parent, ResolveField, Resolver } from '@nestjs/graphql'
 import { FieldModel } from 'src/models/field.model'
 import { InstructionModel } from 'src/models/instruction.model'
 import { MethodModel } from 'src/models/method.model'
-import { VariableModel } from 'src/models/variable.model'
+import {
+    VariableModelConnection,
+    VariableModelEdge,
+} from 'src/models/variable.model'
 import { InstructionService } from 'src/services/instruction.service'
 
 @Resolver(() => InstructionModel)
@@ -46,18 +49,76 @@ export class InstructionResolver {
     @ResolveField()
     async enteringVariables(
         @Parent() instructionModel: InstructionModel,
-    ): Promise<VariableModel[]> {
-        return await this.instructionService.findEnteringVariablesById(
-            instructionModel.id,
-        )
+        @Args('first', { defaultValue: 10 }) first: number,
+        @Args('after', { defaultValue: '' }) after: string,
+    ): Promise<VariableModelConnection> {
+        const variables =
+            await this.instructionService.findEnteringVariablesById(
+                instructionModel.id,
+                first + 1,
+                after,
+            )
+
+        if (variables.length === 0) {
+            return null
+        }
+
+        const hasNextPage = variables.length > first
+
+        let edges: VariableModelEdge[] = []
+        if (hasNextPage) {
+            edges = variables
+                .slice(0, -1)
+                .map((v) => ({ node: v, cursor: v.id }))
+        } else {
+            edges = variables.map((v) => ({ node: v, cursor: v.id }))
+        }
+
+        return {
+            edges,
+            pageInfo: {
+                hasNextPage,
+                startCursor: edges.at(0).cursor,
+                endCursor: edges.at(-1).cursor,
+            },
+        }
     }
 
     @ResolveField()
     async exitingVariables(
         @Parent() instructionModel: InstructionModel,
-    ): Promise<VariableModel[]> {
-        return await this.instructionService.findExitingVariablesById(
-            instructionModel.id,
-        )
+        @Args('first', { defaultValue: 10 }) first: number,
+        @Args('after', { defaultValue: '' }) after: string,
+    ): Promise<VariableModelConnection> {
+        const variables =
+            await this.instructionService.findExitingVariablesById(
+                instructionModel.id,
+                first + 1,
+                after,
+            )
+
+        if (variables.length === 0) {
+            return null
+        }
+
+        const hasNextPage = variables.length > first
+
+        let edges: VariableModelEdge[] = []
+        if (hasNextPage) {
+            edges = variables
+                .slice(0, -1)
+                .map((v) => ({ node: v, cursor: v.id }))
+        } else {
+            edges = variables.map((v) => ({ node: v, cursor: v.id }))
+        }
+
+        return {
+            edges,
+            pageInfo: {
+                hasNextPage,
+                startCursor: edges.at(0).cursor,
+                endCursor: edges.at(-1).cursor,
+            },
+        }
     }
 }

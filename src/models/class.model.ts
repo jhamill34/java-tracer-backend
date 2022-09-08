@@ -1,6 +1,8 @@
 import { Field, ObjectType } from '@nestjs/graphql'
-import { FieldModel } from './field.model'
-import { MethodModel } from './method.model'
+import { ClassModelConnection } from './classconnection.model'
+import { FieldModelConnection } from './field.model'
+import { MethodModelConnection } from './method.model'
+import { PageInfo } from './pageinfo.model'
 
 @ObjectType()
 export class ClassModel {
@@ -22,21 +24,21 @@ export class ClassModel {
     @Field(() => [String], { nullable: true })
     modifiers?: string[]
 
-    @Field(() => [MethodModel], { nullable: true })
-    methods?: MethodModel[]
+    @Field(() => MethodModelConnection, { nullable: true })
+    methods?: MethodModelConnection
 
-    @Field(() => [FieldModel], { nullable: true })
-    fields?: FieldModel[]
+    @Field(() => FieldModelConnection, { nullable: true })
+    fields?: FieldModelConnection
 
     @Field(() => ClassModel, { nullable: true })
     superClass?: ClassModel
 
-    @Field(() => [ClassModel], { nullable: true })
-    subClasses?: ClassModel[]
+    @Field(() => ClassModelConnection, { nullable: true })
+    subClasses?: ClassModelConnection
 
-    @Field(() => [ClassModel], { nullable: true })
-    implementedBy?: ClassModel[]
+    @Field(() => ClassModelConnection, { nullable: true })
+    implementedBy?: ClassModelConnection
 
-    @Field(() => [ClassModel], { nullable: true })
-    implements?: ClassModel[]
+    @Field(() => ClassModelConnection, { nullable: true })
+    implements?: ClassModelConnection
 }

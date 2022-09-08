@@ -33,6 +33,14 @@ import { UsersModule } from './users.module'
             username: 'joshrasm',
             database: 'javatrace',
             port: 5432,
+            cache: {
+                type: 'redis',
+                options: {
+                    host: 'localhost',
+                    port: 6379,
+                },
+                duration: 60000,
+            },
             entities: [
                 ClassClosureEntity,
                 ExtendsEntity,

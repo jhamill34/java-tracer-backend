@@ -1,5 +1,6 @@
 import { Field, ObjectType } from '@nestjs/graphql'
 import { ClassModel } from './class.model'
+import { PageInfo } from './pageinfo.model'
 
 @ObjectType()
 export class FieldModel {
@@ -20,4 +21,22 @@ export class FieldModel {
 
     @Field(() => ClassModel)
     owner?: ClassModel
+}
+
+@ObjectType()
+export class FieldModelConnection {
+    @Field(() => [FieldModelEdge])
+    edges: FieldModelEdge[]
+
+    @Field(() => PageInfo)
+    pageInfo: PageInfo
+}
+
+@ObjectType()
+export class FieldModelEdge {
+    @Field(() => FieldModel)
+    node: FieldModel
+
+    @Field()
+    cursor: string
 }

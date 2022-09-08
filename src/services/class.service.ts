@@ -5,7 +5,7 @@ import { ExtendsEntity } from 'src/entities/closures/extends.entity'
 import { ImplementsEntity } from 'src/entities/closures/implements.entity'
 import { KnownClassEntity } from 'src/entities/knownClass.entity'
 import { UnknownClassEntity } from 'src/entities/unknownClass.entity'
-import { Repository } from 'typeorm'
+import { MoreThan, Repository } from 'typeorm'
 
 @Injectable()
 export class ClassService {
@@ -21,8 +21,9 @@ export class ClassService {
     ) {}
 
     async findByName(name: string): Promise<AbstractClassEntity> {
-        let entity: AbstractClassEntity = await this.knownClassRepo.findOneBy({
-            name,
+        let entity: AbstractClassEntity = await this.knownClassRepo.findOne({
+            where: { name },
+            cache: true,
         })
         if (entity === undefined || entity === null) {
             entity = await this.unknownClassRepo.findOneBy({ name })
@@ -31,14 +32,22 @@ export class ClassService {
         return entity
     }
 
-    async findSubClass(classId: string): Promise<AbstractClassEntity[]> {
+    async findSubClass(
+        classId: string,
+        limit: number,
+        token: string,
+    ): Promise<AbstractClassEntity[]> {
         const extended = await this.extendsRepo.find({
             where: {
                 ancestorId: classId,
+                childId: MoreThan(token),
             },
+            take: limit,
+            order: { childId: 'asc' },
             relations: {
                 child: true,
             },
+            cache: true,
         })
 
         if (extended === undefined || extended === null) {
@@ -56,19 +65,28 @@ export class ClassService {
             relations: {
                 ancestor: true,
             },
+            cache: true,
         })
 
         return extended.ancestor
     }
 
-    async findImplementors(classId: string): Promise<AbstractClassEntity[]> {
+    async findImplementors(
+        classId: string,
+        limit: number,
+        token: string,
+    ): Promise<AbstractClassEntity[]> {
         const extended = await this.implementsRepo.find({
             where: {
                 ancestorId: classId,
+                childId: MoreThan(token),
             },
+            order: { childId: 'asc' },
+            take: limit,
             relations: {
                 child: true,
             },
+            cache: true,
         })
 
         if (extended === undefined || extended === null) {
@@ -78,14 +96,22 @@ export class ClassService {
         return extended.map((e) => e.child)
     }
 
-    async findImplemented(classId: string): Promise<AbstractClassEntity[]> {
+    async findImplemented(
+        classId: string,
+        limit: number,
+        token: string,
+    ): Promise<AbstractClassEntity[]> {
         const extended = await this.implementsRepo.find({
             where: {
                 childId: classId,
+                ancestorId: MoreThan(token),
             },
+            take: limit,
+            order: { ancestorId: 'asc' },
             relations: {
                 ancestor: true,
             },
+            cache: true,
         })
 
         if (extended === undefined || extended === null) {

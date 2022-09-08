@@ -1,11 +1,12 @@
-import { Field, ObjectType } from '@nestjs/graphql'
+import { Field, ID, ObjectType } from '@nestjs/graphql'
 import { ClassModel } from './class.model'
-import { InstructionModel } from './instruction.model'
-import { VariableModel } from './variable.model'
+import { InstructionModelConnection } from './instruction.model'
+import { PageInfo } from './pageinfo.model'
+import { VariableModelConnection } from './variable.model'
 
 @ObjectType()
 export class MethodModel {
-    @Field()
+    @Field(() => ID)
     id: string
 
     @Field()
@@ -23,9 +24,27 @@ export class MethodModel {
     @Field(() => [String], { nullable: true })
     modifiers?: string[]
 
-    @Field(() => [VariableModel], { nullable: true })
-    variables?: VariableModel[]
+    @Field(() => VariableModelConnection, { nullable: true })
+    variables?: VariableModelConnection
 
-    @Field(() => [InstructionModel], { nullable: true })
-    instructions?: InstructionModel[]
+    @Field(() => InstructionModelConnection, { nullable: true })
+    instructions?: InstructionModelConnection
+}
+
+@ObjectType()
+export class MethodModelConnection {
+    @Field(() => [MethodModelEdge])
+    edges: MethodModelEdge[]
+
+    @Field(() => PageInfo)
+    pageInfo: PageInfo
+}
+
+@ObjectType()
+export class MethodModelEdge {
+    @Field(() => MethodModel)
+    node: MethodModel
+
+    @Field()
+    cursor: string
 }

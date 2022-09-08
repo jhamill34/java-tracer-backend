@@ -10,7 +10,8 @@ import { MethodEntity } from 'src/entities/method.entity'
 import { OpCode } from 'src/util/opcodeUtil'
 import { FieldModel } from './field.model'
 import { MethodModel } from './method.model'
-import { VariableModel } from './variable.model'
+import { PageInfo } from './pageinfo.model'
+import { VariableModelConnection } from './variable.model'
 
 registerEnumType(OpCode, {
     name: 'OpCodeEnum',
@@ -58,9 +59,27 @@ export class InstructionModel {
     @Field(() => [String], { nullable: true })
     previous?: string[]
 
-    @Field(() => [VariableModel], { nullable: true })
-    enteringVariables?: VariableModel[]
-    
-    @Field(() => [VariableModel], { nullable: true })
-    exitingVariables?: VariableModel[]
+    @Field(() => VariableModelConnection, { nullable: true })
+    enteringVariables?: VariableModelConnection
+
+    @Field(() => VariableModelConnection, { nullable: true })
+    exitingVariables?: VariableModelConnection
+}
+
+@ObjectType()
+export class InstructionModelConnection {
+    @Field(() => [InstructionModelEdge])
+    edges: InstructionModelEdge[]
+
+    @Field(() => PageInfo)
+    pageInfo: PageInfo
+}
+
+@ObjectType()
+export class InstructionModelEdge {
+    @Field(() => InstructionModel)
+    node: InstructionModel
+
+    @Field()
+    cursor: string
 }
