@@ -3,7 +3,8 @@ import { InjectRepository } from '@nestjs/typeorm'
 import { AbstractClassEntity } from 'src/entities/abstractClass.entity'
 import { FieldEntity } from 'src/entities/field.entity'
 import { MethodEntity } from 'src/entities/method.entity'
-import { LessThan, MoreThan, Repository } from 'typeorm'
+import { reduceBatch } from 'src/util/dataloaderUtil'
+import { In, Repository } from 'typeorm'
 
 @Injectable()
 export class ReferenceEntityService {
@@ -14,69 +15,55 @@ export class ReferenceEntityService {
         private fieldRepo: Repository<FieldEntity>,
     ) {}
 
-    async findOwnerForMethodId(id: string): Promise<AbstractClassEntity> {
-        const method = await this.methodRepo.findOne({
-            where: { id },
+    async findOwnerForMethodIds(ids: string[]): Promise<AbstractClassEntity[]> {
+        const methods = await this.methodRepo.find({
+            where: { id: In(ids) },
             relations: { class: true },
             cache: true,
         })
 
-        if (method !== undefined && method !== null) {
-            return method.class
-        }
-
-        return null
+        return ids.map((id) => methods.find((m) => m.id === id).class)
     }
 
-    async findOwnerForFieldId(id: string): Promise<AbstractClassEntity> {
-        const method = await this.fieldRepo.findOne({
-            where: { id },
+    async findOwnerForFieldIds(ids: string[]): Promise<AbstractClassEntity[]> {
+        const fields = await this.fieldRepo.find({
+            where: { id: In(ids) },
             relations: { class: true },
             cache: true,
         })
 
-        if (method !== undefined && method !== null) {
-            return method.class
-        }
-
-        return null
+        return ids.map((id) => fields.find((m) => m.id === id).class)
     }
 
-    async findAllMethodsForClass(
-        classId: string,
-        limit: number,
-        token = '',
-        reverse = false,
-    ): Promise<MethodEntity[]> {
-        return await this.methodRepo.find({
+    async findAllMethodsForClasses(
+        classIds: string[],
+    ): Promise<MethodEntity[][]> {
+        const result = await this.methodRepo.find({
             where: {
-                classId,
-                id: reverse ? LessThan(token) : MoreThan(token),
+                classId: In(classIds),
             },
-            take: limit,
             order: {
                 id: 'asc',
             },
             cache: true,
         })
+
+        return reduceBatch(classIds, result, (r) => r.classId)
     }
 
-    async findAllFieldsForClass(
-        classId: string,
-        limit: number,
-        token = '',
-        reverse = false,
-    ): Promise<FieldEntity[]> {
-        return await this.fieldRepo.find({
+    async findAllFieldsForClasses(
+        classIds: string[],
+    ): Promise<FieldEntity[][]> {
+        const result = await this.fieldRepo.find({
             where: {
-                classId,
-                id: reverse ? LessThan(token) : MoreThan(token),
+                classId: In(classIds),
             },
-            take: limit,
             order: {
                 id: 'asc',
             },
             cache: true,
         })
+
+        return reduceBatch(classIds, result, (r) => r.classId)
     }
 }

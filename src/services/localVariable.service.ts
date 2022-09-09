@@ -1,7 +1,8 @@
 import { Injectable } from '@nestjs/common'
 import { InjectRepository } from '@nestjs/typeorm'
 import { LocalVariableEntity } from 'src/entities/localVariable.entity'
-import { LessThan, MoreThan, Repository } from 'typeorm'
+import { reduceBatch } from 'src/util/dataloaderUtil'
+import { In, Repository } from 'typeorm'
 
 @Injectable()
 export class LocalVariableService {
@@ -10,27 +11,19 @@ export class LocalVariableService {
         private variableRepo: Repository<LocalVariableEntity>,
     ) {}
 
-    async findAllByMethodId(
-        methodId: string,
-        limit: number,
-        token = '',
-        reverse = false,
-    ): Promise<LocalVariableEntity[]> {
+    async findAllByMethodIds(
+        methodIds: string[],
+    ): Promise<LocalVariableEntity[][]> {
         const vars = await this.variableRepo.find({
             where: {
-                methodId,
-                id: reverse ? LessThan(token) : MoreThan(token),
+                methodId: In(methodIds),
             },
-            take: limit,
             order: {
                 id: 'asc',
             },
             cache: true,
         })
-        if (vars === undefined || vars === null) {
-            return []
-        }
 
-        return vars
+        return reduceBatch(methodIds, vars, (v) => v.methodId)
     }
 }

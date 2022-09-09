@@ -6,9 +6,9 @@ import {
     registerEnumType,
 } from '@nestjs/graphql'
 import { OpCode } from 'src/util/opcodeUtil'
+import { Paginated } from 'src/util/paginationUtil'
 import { FieldModel } from './field.model'
 import { MethodModel } from './method.model'
-import { PageInfo } from './pageinfo.model'
 import { VariableModelConnection } from './variable.model'
 
 registerEnumType(OpCode, {
@@ -65,19 +65,4 @@ export class InstructionModel {
 }
 
 @ObjectType()
-export class InstructionModelConnection {
-    @Field(() => [InstructionModelEdge])
-    edges: InstructionModelEdge[]
-
-    @Field(() => PageInfo)
-    pageInfo: PageInfo
-}
-
-@ObjectType()
-export class InstructionModelEdge {
-    @Field(() => InstructionModel)
-    node: InstructionModel
-
-    @Field()
-    cursor: string
-}
+export class InstructionModelConnection extends Paginated(InstructionModel) {}

@@ -9,6 +9,9 @@ export class FieldResolver {
 
     @ResolveField()
     async owner(@Parent() field: FieldModel): Promise<ClassModel> {
-        return await this.referenceService.findOwnerForFieldId(field.id)
+        const owners = await this.referenceService.findOwnerForFieldIds([
+            field.id,
+        ])
+        return owners[0]
     }
 }

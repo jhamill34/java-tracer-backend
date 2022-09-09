@@ -1,5 +1,5 @@
 import { Field, ObjectType } from '@nestjs/graphql'
-import { PageInfo } from './pageinfo.model'
+import { Paginated } from 'src/util/paginationUtil'
 
 @ObjectType()
 export class VariableModel {
@@ -17,19 +17,4 @@ export class VariableModel {
 }
 
 @ObjectType()
-export class VariableModelConnection {
-    @Field(() => [VariableModelEdge])
-    edges: VariableModelEdge[]
-
-    @Field(() => PageInfo)
-    pageInfo: PageInfo
-}
-
-@ObjectType()
-export class VariableModelEdge {
-    @Field(() => VariableModel)
-    node: VariableModel
-
-    @Field()
-    cursor: string
-}
+export class VariableModelConnection extends Paginated(VariableModel) {}

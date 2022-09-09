@@ -10,7 +10,8 @@ import { VariableModelConnection } from 'src/models/variable.model'
 import { InstructionService } from 'src/services/instruction.service'
 import { LocalVariableService } from 'src/services/localVariable.service'
 import { ReferenceEntityService } from 'src/services/referenceEntity.service'
-import { OpCode } from 'src/util/opcodeUtil'
+import { paginate, PaginationArgs } from 'src/util/paginationUtil'
+import { transformLocalVariableEntity } from './instruction.resolver'
 
 @Resolver(() => MethodModel)
 export class MethodResolver {
@@ -23,127 +24,46 @@ export class MethodResolver {
     @ResolveField()
     async variables(
         @Parent() method: MethodModel,
-        @Args('first', { nullable: true }) first?: number,
-        @Args('after', { nullable: true }) after?: string,
-        @Args('last', { nullable: true }) last?: number,
-        @Args('before', { nullable: true }) before?: string,
+        @Args() args: PaginationArgs,
     ): Promise<VariableModelConnection> {
-        let reverse = false
-        let limit = first || 10
-        let token = after || ''
-
-        if (!first && !after) {
-            reverse = !!(last || before)
-            limit = last || limit
-            token = before || token
-        }
-
-        const variables = await this.variableService.findAllByMethodId(
+        const variables = await this.variableService.findAllByMethodIds([
             method.id,
-            limit + 1,
-            token,
-            reverse,
-        )
+        ])
 
-        if (variables.length === 0) {
-            return null
-        }
-
-        const hasNextPage = variables.length > limit
-
-        let validVars = variables
-        if (hasNextPage) {
-            if (reverse) {
-                validVars = variables.slice(1)
-            } else {
-                validVars = variables.slice(0, -1)
-            }
-        }
-
-        const edges = validVars.map((v) => ({ node: v, cursor: v.id }))
-
-        return {
-            edges,
-            pageInfo: {
-                hasNextPage,
-                startCursor: edges.at(0).cursor,
-                endCursor: edges.at(-1).cursor,
-                forward: !reverse,
-            },
-        }
+        return paginate(variables[0], args, transformLocalVariableEntity)
     }
 
     @ResolveField()
     async instructions(
         @Parent() method: MethodModel,
-        @Args('first', { nullable: true }) first?: number,
-        @Args('after', { nullable: true }) after?: string,
-        @Args('last', { nullable: true }) last?: number,
-        @Args('before', { nullable: true }) before?: string,
-        @Args('opCodes', { defaultValue: [], type: () => [OpCode] })
-        opCodes?: OpCode[],
+        @Args() args: PaginationArgs,
     ): Promise<InstructionModelConnection> {
-        let reverse = false
-        let limit = first || 10
-        let token = after || ''
-
-        if (!first && !after) {
-            reverse = !!(last || before)
-            limit = last || limit
-            token = before || token
-        }
-
-        const instructions = await this.instructionService.findAllByMethodId(
+        const instructions = await this.instructionService.findAllByMethodIds([
             method.id,
-            limit + 1,
-            token,
-            opCodes,
-            reverse,
-        )
+        ])
 
-        if (instructions.length === 0) {
-            return null
-        }
-
-        const hasNextPage = instructions.length > limit
-
-        let validInstructions = instructions
-        if (hasNextPage) {
-            if (reverse) {
-                validInstructions = instructions.slice(1)
-            } else {
-                validInstructions = instructions.slice(0, -1)
-            }
-        }
-
-        const edges = validInstructions.map((i) => ({
-            node: transformInstructionEntity(i),
-            cursor: i.id,
-        }))
-
-        return {
-            edges,
-            pageInfo: {
-                hasNextPage,
-                startCursor: edges.at(0).cursor,
-                endCursor: edges.at(-1).cursor,
-                forward: !reverse,
-            },
-        }
+        return paginate(instructions[0], args, transformInstructionEntity)
     }
 
     @ResolveField()
     async owner(@Parent() method: MethodModel): Promise<ClassModel> {
-        return await this.referenceService.findOwnerForMethodId(method.id)
+        const owner = await this.referenceService.findOwnerForMethodIds([
+            method.id,
+        ])
+        return owner[0]
     }
 }
 
-function transformInstructionEntity(i: InstructionEntity): InstructionModel {
+function transformInstructionEntity(
+    i: InstructionEntity,
+): [InstructionModel, string] {
     const { id, opCode, lineNumber, stack } = i
-    return {
+    const node = {
         id,
         opCode,
         lineNumber,
         stack,
     }
+
+    return [node, id]
 }

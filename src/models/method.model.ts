@@ -1,7 +1,7 @@
 import { Field, ID, ObjectType } from '@nestjs/graphql'
+import { Paginated } from 'src/util/paginationUtil'
 import { ClassModel } from './class.model'
 import { InstructionModelConnection } from './instruction.model'
-import { PageInfo } from './pageinfo.model'
 import { VariableModelConnection } from './variable.model'
 
 @ObjectType()
@@ -34,19 +34,4 @@ export class MethodModel {
 }
 
 @ObjectType()
-export class MethodModelConnection {
-    @Field(() => [MethodModelEdge])
-    edges: MethodModelEdge[]
-
-    @Field(() => PageInfo)
-    pageInfo: PageInfo
-}
-
-@ObjectType()
-export class MethodModelEdge {
-    @Field(() => MethodModel)
-    node: MethodModel
-
-    @Field()
-    cursor: string
-}
+export class MethodModelConnection extends Paginated(MethodModel) {}

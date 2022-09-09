@@ -5,7 +5,8 @@ import { ExtendsEntity } from 'src/entities/closures/extends.entity'
 import { ImplementsEntity } from 'src/entities/closures/implements.entity'
 import { KnownClassEntity } from 'src/entities/knownClass.entity'
 import { UnknownClassEntity } from 'src/entities/unknownClass.entity'
-import { LessThan, MoreThan, Repository } from 'typeorm'
+import { reduceBatch } from 'src/util/dataloaderUtil'
+import { In, Repository } from 'typeorm'
 
 @Injectable()
 export class ClassService {
@@ -32,18 +33,13 @@ export class ClassService {
         return entity
     }
 
-    async findSubClass(
-        classId: string,
-        limit: number,
-        token: string,
-        reverse = false,
-    ): Promise<AbstractClassEntity[]> {
+    async findSubClassesForClasses(
+        classIds: string[],
+    ): Promise<AbstractClassEntity[][]> {
         const extended = await this.extendsRepo.find({
             where: {
-                ancestorId: classId,
-                childId: reverse ? LessThan(token) : MoreThan(token),
+                ancestorId: In(classIds),
             },
-            take: limit,
             order: { childId: 'asc' },
             relations: {
                 child: true,
@@ -55,13 +51,19 @@ export class ClassService {
             return []
         }
 
-        return extended.map((e) => e.child)
+        return reduceBatch(
+            classIds,
+            extended.map((e) => e.child),
+            (e) => e.id,
+        )
     }
 
-    async findSuperClass(classId: string): Promise<AbstractClassEntity> {
-        const extended = await this.extendsRepo.findOne({
+    async findSuperClassForClasses(
+        classIds: string[],
+    ): Promise<AbstractClassEntity[][]> {
+        const extended = await this.extendsRepo.find({
             where: {
-                childId: classId,
+                childId: In(classIds),
             },
             relations: {
                 ancestor: true,
@@ -69,22 +71,21 @@ export class ClassService {
             cache: true,
         })
 
-        return extended.ancestor
+        return reduceBatch(
+            classIds,
+            extended.map((e) => e.ancestor),
+            (e) => e.id,
+        )
     }
 
-    async findImplementors(
-        classId: string,
-        limit: number,
-        token: string,
-        reverse = false,
-    ): Promise<AbstractClassEntity[]> {
+    async findImplementorsForClasses(
+        classIds: string[],
+    ): Promise<AbstractClassEntity[][]> {
         const extended = await this.implementsRepo.find({
             where: {
-                ancestorId: classId,
-                childId: reverse ? LessThan(token) : MoreThan(token),
+                ancestorId: In(classIds),
             },
             order: { childId: 'asc' },
-            take: limit,
             relations: {
                 child: true,
             },
@@ -95,21 +96,20 @@ export class ClassService {
             return []
         }
 
-        return extended.map((e) => e.child)
+        return reduceBatch(
+            classIds,
+            extended.map((e) => e.child),
+            (e) => e.id,
+        )
     }
 
-    async findImplemented(
-        classId: string,
-        limit: number,
-        token: string,
-        reverse = false,
-    ): Promise<AbstractClassEntity[]> {
+    async findImplementedForClasses(
+        classIds: string[],
+    ): Promise<AbstractClassEntity[][]> {
         const extended = await this.implementsRepo.find({
             where: {
-                childId: classId,
-                ancestorId: reverse ? LessThan(token) : MoreThan(token),
+                childId: In(classIds),
             },
-            take: limit,
             order: { ancestorId: 'asc' },
             relations: {
                 ancestor: true,
@@ -121,6 +121,10 @@ export class ClassService {
             return []
         }
 
-        return extended.map((e) => e.ancestor)
+        return reduceBatch(
+            classIds,
+            extended.map((e) => e.ancestor),
+            (e) => e.id,
+        )
     }
 }

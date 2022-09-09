@@ -5,8 +5,8 @@ import { InstructionEntity } from 'src/entities/instruction.entity'
 import { LocalVariableEntity } from 'src/entities/localVariable.entity'
 import { MethodEntity } from 'src/entities/method.entity'
 import { ReferenceEntity } from 'src/entities/reference.entity'
-import { OpCode } from 'src/util/opcodeUtil'
-import { In, LessThan, MoreThan, MoreThanOrEqual, Repository } from 'typeorm'
+import { reduceBatch } from 'src/util/dataloaderUtil'
+import { In, Repository } from 'typeorm'
 
 @Injectable()
 export class InstructionService {
@@ -17,18 +17,12 @@ export class InstructionService {
         private instructionClosureRepo: Repository<InstructionClosureEntity>,
     ) {}
 
-    async findEnteringVariablesById(
-        id: string,
-        limit: number,
-        token: string,
-        reverse = false,
-    ): Promise<LocalVariableEntity[]> {
-        const instr = await this.instructionRepo.findOne({
+    async findEnteringVariablesForInstructionIds(
+        ids: string[],
+    ): Promise<LocalVariableEntity[][]> {
+        const instr = await this.instructionRepo.find({
             where: {
-                id,
-                enteringVariables: {
-                    id: reverse ? LessThan(token) : MoreThan(token),
-                },
+                id: In(ids),
             },
             relations: { enteringVariables: true },
             order: {
@@ -37,25 +31,15 @@ export class InstructionService {
             cache: true,
         })
 
-        if (instr === undefined || instr === null) {
-            return null
-        }
-
-        return instr.enteringVariables.slice(0, limit)
+        return ids.map((id) => instr.find((i) => i.id === id).enteringVariables)
     }
 
-    async findExitingVariablesById(
-        id: string,
-        limit: number,
-        token: string,
-        reverse = false,
-    ): Promise<LocalVariableEntity[]> {
-        const instr = await this.instructionRepo.findOne({
+    async findExitingVariablesForInstructionIds(
+        ids: string[],
+    ): Promise<LocalVariableEntity[][]> {
+        const instr = await this.instructionRepo.find({
             where: {
-                id,
-                exitingVariables: {
-                    id: reverse ? LessThan(token) : MoreThan(token),
-                },
+                id: In(ids),
             },
             relations: { exitingVariables: true },
             order: {
@@ -64,98 +48,70 @@ export class InstructionService {
             cache: true,
         })
 
-        if (instr === undefined || instr === null) {
-            return null
-        }
-
-        return instr.exitingVariables.slice(0, limit)
+        return ids.map((id) => instr.find((i) => i.id === id).exitingVariables)
     }
 
-    async findInvokedById(id: string): Promise<MethodEntity> {
-        const instr = await this.instructionRepo.findOne({
-            where: { id },
+    async findInvokedForInstructionIds(ids: string[]): Promise<MethodEntity[]> {
+        const instr = await this.instructionRepo.find({
+            where: { id: In(ids) },
             relations: { invokedBy: true },
             cache: true,
         })
 
-        if (instr === undefined || instr === null) {
-            return null
-        }
-
-        return instr.invokedBy
+        return ids.map((id) => instr.find((i) => i.id === id).invokedBy)
     }
 
-    async findReferenceById(id: string): Promise<ReferenceEntity> {
-        const instr = await this.instructionRepo.findOne({
-            where: { id },
+    async findReferenceByInstructionIds(
+        ids: string[],
+    ): Promise<ReferenceEntity[]> {
+        const instr = await this.instructionRepo.find({
+            where: { id: In(ids) },
             relations: { reference: true },
             cache: true,
         })
 
-        if (instr === undefined || instr === null) {
-            return null
-        }
-
-        return instr.reference
+        return ids.map((id) => instr.find((i) => i.id === id).invokedBy)
     }
 
-    async findAllByMethodId(
-        methodId: string,
-        limit: number,
-        token = '',
-        opCodes: OpCode[],
-        reverse = false,
-    ): Promise<InstructionEntity[]> {
-        const instr = this.instructionRepo.find({
+    async findAllByMethodIds(
+        methodIds: string[],
+    ): Promise<InstructionEntity[][]> {
+        const instr = await this.instructionRepo.find({
             where: {
-                invokedById: methodId,
-                id: reverse ? LessThan(token) : MoreThan(token),
-                opCode:
-                    opCodes.length === 0
-                        ? MoreThanOrEqual(OpCode.UNKNOWN)
-                        : In(opCodes),
+                invokedById: In(methodIds),
             },
-            take: limit,
             order: {
                 id: 'asc',
             },
             cache: true,
         })
 
-        if (instr === undefined || instr === null) {
-            return []
-        }
-
-        return instr
+        return reduceBatch(methodIds, instr, (i) => i.invokedById)
     }
 
-    async findNextById(instrId: string): Promise<string[]> {
+    async findNextByInstructionIds(
+        instrIds: string[],
+    ): Promise<InstructionClosureEntity[][]> {
         const edges = await this.instructionClosureRepo.find({
             where: {
-                ancestorId: instrId,
+                ancestorId: In(instrIds),
             },
             cache: true,
         })
 
-        if (edges === undefined || edges === null) {
-            return []
-        }
-
-        return edges.map((e) => e.childId)
+        return reduceBatch(instrIds, edges, (e) => e.ancestorId)
     }
 
-    async findPreviousById(instrId: string): Promise<string[]> {
+    async findPreviousByInstructionIds(
+        instrIds: string[],
+    ): Promise<InstructionClosureEntity[][]> {
         const edges = await this.instructionClosureRepo.find({
             where: {
-                childId: instrId,
+                childId: In(instrIds),
             },
             cache: true,
         })
 
-        if (edges === undefined || edges === null) {
-            return []
-        }
-
-        return edges.map((e) => e.ancestorId)
+        return reduceBatch(instrIds, edges, (e) => e.childId)
     }
 }

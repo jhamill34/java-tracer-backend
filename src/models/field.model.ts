@@ -1,6 +1,6 @@
 import { Field, ObjectType } from '@nestjs/graphql'
+import { Paginated } from 'src/util/paginationUtil'
 import { ClassModel } from './class.model'
-import { PageInfo } from './pageinfo.model'
 
 @ObjectType()
 export class FieldModel {
@@ -26,19 +26,4 @@ export class FieldModel {
 }
 
 @ObjectType()
-export class FieldModelConnection {
-    @Field(() => [FieldModelEdge])
-    edges: FieldModelEdge[]
-
-    @Field(() => PageInfo)
-    pageInfo: PageInfo
-}
-
-@ObjectType()
-export class FieldModelEdge {
-    @Field(() => FieldModel)
-    node: FieldModel
-
-    @Field()
-    cursor: string
-}
+export class FieldModelConnection extends Paginated(FieldModel) {}

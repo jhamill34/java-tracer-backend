@@ -1,8 +1,7 @@
 import { Args, Parent, Query, ResolveField, Resolver } from '@nestjs/graphql'
 import { MethodEntity } from 'src/entities/method.entity'
 import { KnownClassEntity } from 'src/entities/knownClass.entity'
-import { ClassModel } from 'src/models/class.model'
-import { ClassModelConnection } from 'src/models/classconnection.model'
+import { ClassModel, ClassModelConnection } from 'src/models/class.model'
 import { FieldModel, FieldModelConnection } from 'src/models/field.model'
 import { MethodModel, MethodModelConnection } from 'src/models/method.model'
 import { ClassService } from 'src/services/class.service'
@@ -13,6 +12,9 @@ import {
     translateMethodAccess,
 } from 'src/util/accessMaskUtil'
 import { FieldEntity } from 'src/entities/field.entity'
+import { paginate, PaginationArgs } from 'src/util/paginationUtil'
+import { AbstractClassEntity } from 'src/entities/abstractClass.entity'
+import { UnknownClassEntity } from 'src/entities/unknownClass.entity'
 
 @Resolver(() => ClassModel)
 export class ClassResolver {
@@ -38,286 +40,78 @@ export class ClassResolver {
     @ResolveField()
     async methods(
         @Parent() klass: ClassModel,
-        @Args('first', { nullable: true }) first?: number,
-        @Args('after', { nullable: true }) after?: string,
-        @Args('last', { nullable: true }) last?: number,
-        @Args('before', { nullable: true }) before?: string,
+        @Args() args: PaginationArgs,
     ): Promise<MethodModelConnection> {
-        let reverse = false
-        let limit = first || 10
-        let token = after || ''
-
-        if (!first && !after) {
-            reverse = !!(last || before)
-            limit = last || limit
-            token = before || token
-        }
-
-        const methods = await this.referenceService.findAllMethodsForClass(
+        const methods = await this.referenceService.findAllMethodsForClasses([
             klass.id,
-            limit + 1,
-            token,
-            reverse,
-        )
+        ])
 
-        if (methods.length === 0) {
-            return null
-        }
-
-        const hasNextPage = methods.length > limit
-
-        let validEntries = methods
-        if (hasNextPage) {
-            if (reverse) {
-                validEntries = methods.slice(1)
-            } else {
-                validEntries = methods.slice(0, -1)
-            }
-        }
-
-        const edges = validEntries.map((m) => ({
-            node: transformMethodEntity(m),
-            cursor: m.id,
-        }))
-
-        return {
-            edges,
-            pageInfo: {
-                hasNextPage,
-                startCursor: edges.at(0).cursor,
-                endCursor: edges.at(-1).cursor,
-                forward: !reverse,
-            },
-        }
+        return paginate(methods[0], args, transformMethodEntity)
     }
 
     @ResolveField()
     async fields(
         @Parent() klass: ClassModel,
-        @Args('first', { nullable: true }) first?: number,
-        @Args('after', { nullable: true }) after?: string,
-        @Args('last', { nullable: true }) last?: number,
-        @Args('before', { nullable: true }) before?: string,
+        @Args() args: PaginationArgs,
     ): Promise<FieldModelConnection> {
-        let reverse = false
-        let limit = first || 10
-        let token = after || ''
-
-        if (!first && !after) {
-            reverse = !!(last || before)
-            limit = last || limit
-            token = before || token
-        }
-
-        const fields = await this.referenceService.findAllFieldsForClass(
+        const fields = await this.referenceService.findAllFieldsForClasses([
             klass.id,
-            limit + 1,
-            token,
-            reverse,
-        )
+        ])
 
-        if (fields.length === 0) {
-            return null
-        }
-
-        const hasNextPage = fields.length > limit
-
-        let validFields = fields
-        if (hasNextPage) {
-            if (reverse) {
-                validFields = fields.slice(1)
-            } else {
-                validFields = fields.slice(0, -1)
-            }
-        }
-
-        const edges = validFields.map((f) => ({
-            node: transformFieldEntity(f),
-            cursor: f.id,
-        }))
-
-        return {
-            edges,
-            pageInfo: {
-                hasNextPage,
-                startCursor: edges.at(0).cursor,
-                endCursor: edges.at(-1).cursor,
-                forward: !reverse,
-            },
-        }
+        return paginate(fields[0], args, transformFieldEntity)
     }
 
     @ResolveField()
     async superClass(@Parent() klass: ClassModel): Promise<ClassModel> {
-        return await this.classService.findSuperClass(klass.id)
+        const result = await this.classService.findSuperClassForClasses([
+            klass.id,
+        ])
+        return result[0][0]
     }
 
     @ResolveField()
     async subClasses(
         @Parent() klass: ClassModel,
-        @Args('first', { nullable: true }) first?: number,
-        @Args('after', { nullable: true }) after?: string,
-        @Args('last', { nullable: true }) last?: number,
-        @Args('before', { nullable: true }) before?: string,
+        @Args() args: PaginationArgs,
     ): Promise<ClassModelConnection> {
-        let reverse = false
-        let limit = first || 10
-        let token = after || ''
-
-        if (!first && !after) {
-            reverse = !!(last || before)
-            limit = last || limit
-            token = before || token
-        }
-
-        const classes = await this.classService.findSubClass(
+        const classes = await this.classService.findSubClassesForClasses([
             klass.id,
-            limit + 1,
-            token,
-            reverse,
-        )
+        ])
 
-        if (classes.length === 0) {
-            return null
-        }
-
-        const hasNextPage = classes.length > limit
-
-        let validClasses = classes
-        if (hasNextPage) {
-            if (reverse) {
-                validClasses = classes.slice(1)
-            } else {
-                validClasses = classes.slice(0, -1)
-            }
-        }
-
-        const edges = validClasses.map((c) => ({ node: c, cursor: c.id }))
-
-        return {
-            edges,
-            pageInfo: {
-                hasNextPage,
-                startCursor: edges.at(0).cursor,
-                endCursor: edges.at(-1).cursor,
-                forward: !reverse,
-            },
-        }
+        return paginate(classes[0], args, transformClassEntity)
     }
 
     @ResolveField()
     async implementedBy(
         @Parent() klass: ClassModel,
-        @Args('first', { nullable: true }) first?: number,
-        @Args('after', { nullable: true }) after?: string,
-        @Args('last', { nullable: true }) last?: number,
-        @Args('before', { nullable: true }) before?: string,
+        @Args() args: PaginationArgs,
     ): Promise<ClassModelConnection> {
-        let reverse = false
-        let limit = first || 10
-        let token = after || ''
-
-        if (!first && !after) {
-            reverse = !!(last || before)
-            limit = last || limit
-            token = before || token
-        }
-
-        const classes = await this.classService.findImplementors(
+        const classes = await this.classService.findImplementorsForClasses([
             klass.id,
-            limit + 1,
-            token,
-            reverse,
-        )
+        ])
 
-        if (classes.length === 0) {
-            return null
-        }
-
-        const hasNextPage = classes.length > last
-
-        let validClasses = classes
-        if (hasNextPage) {
-            if (reverse) {
-                validClasses = classes.slice(1)
-            } else {
-                validClasses = classes.slice(0, -1)
-            }
-        }
-
-        const edges = validClasses.map((c) => ({ node: c, cursor: c.id }))
-
-        return {
-            edges,
-            pageInfo: {
-                hasNextPage,
-                startCursor: edges.at(0).cursor,
-                endCursor: edges.at(-1).cursor,
-                forward: !reverse,
-            },
-        }
+        return paginate(classes[0], args, transformClassEntity)
     }
 
     @ResolveField()
     async implements(
         @Parent() klass: ClassModel,
-        @Args('first', { nullable: true }) first?: number,
-        @Args('after', { nullable: true }) after?: string,
-        @Args('last', { nullable: true }) last?: number,
-        @Args('before', { nullable: true }) before?: string,
+        @Args() args: PaginationArgs,
     ): Promise<ClassModelConnection> {
-        let reverse = false
-        let limit = first || 10
-        let token = after || ''
-
-        if (!first && !after) {
-            reverse = !!(last || before)
-            limit = last || limit
-            token = before || token
-        }
-
-        const classes = await this.classService.findImplemented(
+        const classes = await this.classService.findImplementedForClasses([
             klass.id,
-            limit + 1,
-            token,
-            reverse,
-        )
+        ])
 
-        if (classes.length === 0) {
-            return null
-        }
-
-        const hasNextPage = classes.length > limit
-
-        let validClasses = classes
-        if (hasNextPage) {
-            if (reverse) {
-                validClasses = classes.slice(1)
-            } else {
-                validClasses = classes.slice(0, -1)
-            }
-        }
-
-        const edges = validClasses.map((c) => ({ node: c, cursor: c.id }))
-
-        return {
-            edges,
-            pageInfo: {
-                hasNextPage,
-                startCursor: edges.at(0).cursor,
-                endCursor: edges.at(-1).cursor,
-                forward: !reverse,
-            },
-        }
+        return paginate(classes[0], args, transformClassEntity)
     }
 }
 
-export function transformMethodEntity(m: MethodEntity): MethodModel {
+export function transformMethodEntity(m: MethodEntity): [MethodModel, string] {
     const { id, name, descriptor, signature, modifiers: methodModifiers } = m
 
     const modifiers = translateMethodAccess(methodModifiers)
 
-    return {
+    const node = {
         type: 'method',
         id,
         name,
@@ -325,14 +119,16 @@ export function transformMethodEntity(m: MethodEntity): MethodModel {
         signature,
         modifiers,
     }
+
+    return [node, id]
 }
 
-export function transformFieldEntity(f: FieldEntity): FieldModel {
+export function transformFieldEntity(f: FieldEntity): [FieldModel, string] {
     const { id, name, descriptor, signature, modifiers: fieldModifiers } = f
 
     const modifiers = translateFieldAccess(fieldModifiers)
 
-    return {
+    const node = {
         type: 'field',
         id,
         name,
@@ -340,4 +136,45 @@ export function transformFieldEntity(f: FieldEntity): FieldModel {
         signature,
         modifiers,
     }
+
+    return [node, id]
+}
+
+export function transformClassEntity(
+    c: AbstractClassEntity,
+): [ClassModel, string] {
+    if (c instanceof KnownClassEntity) {
+        return transformKnownClassEntity(c)
+    } else if (c instanceof UnknownClassEntity) {
+        return transformUnknownClassEntity(c)
+    }
+
+    return [null, '']
+}
+
+export function transformKnownClassEntity(
+    c: KnownClassEntity,
+): [ClassModel, string] {
+    const {
+        id,
+        name,
+        hash,
+        packageName,
+        signature,
+        modifiers: classModifiers,
+    } = c
+
+    const modifiers = translateClassAccess(classModifiers)
+
+    const node = { id, name, hash, packageName, signature, modifiers }
+
+    return [node, id]
+}
+
+export function transformUnknownClassEntity(
+    c: UnknownClassEntity,
+): [ClassModel, string] {
+    const { id } = c
+
+    return [c, id]
 }

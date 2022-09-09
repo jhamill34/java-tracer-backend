@@ -1,7 +1,9 @@
 import { Field, ObjectType } from '@nestjs/graphql'
-import { ClassModelConnection } from './classconnection.model'
+import { Paginated } from 'src/util/paginationUtil'
 import { FieldModelConnection } from './field.model'
 import { MethodModelConnection } from './method.model'
+
+type ClassConnection = ReturnType<() => ClassModelConnection>
 
 @ObjectType()
 export class ClassModel {
@@ -33,11 +35,14 @@ export class ClassModel {
     superClass?: ClassModel
 
     @Field(() => ClassModelConnection, { nullable: true })
-    subClasses?: ClassModelConnection
+    subClasses?: ClassConnection
 
     @Field(() => ClassModelConnection, { nullable: true })
-    implementedBy?: ClassModelConnection
+    implementedBy?: ClassConnection
 
     @Field(() => ClassModelConnection, { nullable: true })
-    implements?: ClassModelConnection
+    implements?: ClassConnection
 }
+
+@ObjectType()
+export class ClassModelConnection extends Paginated(ClassModel) {}
