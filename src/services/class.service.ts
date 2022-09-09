@@ -5,7 +5,7 @@ import { ExtendsEntity } from 'src/entities/closures/extends.entity'
 import { ImplementsEntity } from 'src/entities/closures/implements.entity'
 import { KnownClassEntity } from 'src/entities/knownClass.entity'
 import { UnknownClassEntity } from 'src/entities/unknownClass.entity'
-import { MoreThan, Repository } from 'typeorm'
+import { LessThan, MoreThan, Repository } from 'typeorm'
 
 @Injectable()
 export class ClassService {
@@ -36,11 +36,12 @@ export class ClassService {
         classId: string,
         limit: number,
         token: string,
+        reverse = false,
     ): Promise<AbstractClassEntity[]> {
         const extended = await this.extendsRepo.find({
             where: {
                 ancestorId: classId,
-                childId: MoreThan(token),
+                childId: reverse ? LessThan(token) : MoreThan(token),
             },
             take: limit,
             order: { childId: 'asc' },
@@ -75,11 +76,12 @@ export class ClassService {
         classId: string,
         limit: number,
         token: string,
+        reverse = false,
     ): Promise<AbstractClassEntity[]> {
         const extended = await this.implementsRepo.find({
             where: {
                 ancestorId: classId,
-                childId: MoreThan(token),
+                childId: reverse ? LessThan(token) : MoreThan(token),
             },
             order: { childId: 'asc' },
             take: limit,
@@ -100,11 +102,12 @@ export class ClassService {
         classId: string,
         limit: number,
         token: string,
+        reverse = false,
     ): Promise<AbstractClassEntity[]> {
         const extended = await this.implementsRepo.find({
             where: {
                 childId: classId,
-                ancestorId: MoreThan(token),
+                ancestorId: reverse ? LessThan(token) : MoreThan(token),
             },
             take: limit,
             order: { ancestorId: 'asc' },

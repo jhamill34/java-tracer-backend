@@ -2,20 +2,9 @@ import { Args, Parent, Query, ResolveField, Resolver } from '@nestjs/graphql'
 import { MethodEntity } from 'src/entities/method.entity'
 import { KnownClassEntity } from 'src/entities/knownClass.entity'
 import { ClassModel } from 'src/models/class.model'
-import {
-    ClassModelConnection,
-    ClassModelEdge,
-} from 'src/models/classconnection.model'
-import {
-    FieldModel,
-    FieldModelConnection,
-    FieldModelEdge,
-} from 'src/models/field.model'
-import {
-    MethodModel,
-    MethodModelConnection,
-    MethodModelEdge,
-} from 'src/models/method.model'
+import { ClassModelConnection } from 'src/models/classconnection.model'
+import { FieldModel, FieldModelConnection } from 'src/models/field.model'
+import { MethodModel, MethodModelConnection } from 'src/models/method.model'
 import { ClassService } from 'src/services/class.service'
 import { ReferenceEntityService } from 'src/services/referenceEntity.service'
 import {
@@ -49,72 +38,47 @@ export class ClassResolver {
     @ResolveField()
     async methods(
         @Parent() klass: ClassModel,
-        @Args('first', { defaultValue: 10 }) first: number,
-        @Args('after', { defaultValue: '' }) after: string,
+        @Args('first', { nullable: true }) first?: number,
+        @Args('after', { nullable: true }) after?: string,
+        @Args('last', { nullable: true }) last?: number,
+        @Args('before', { nullable: true }) before?: string,
     ): Promise<MethodModelConnection> {
+        let reverse = false
+        let limit = first || 10
+        let token = after || ''
+
+        if (!first && !after) {
+            reverse = !!(last || before)
+            limit = last || limit
+            token = before || token
+        }
+
         const methods = await this.referenceService.findAllMethodsForClass(
             klass.id,
-            first + 1,
-            after,
+            limit + 1,
+            token,
+            reverse,
         )
 
         if (methods.length === 0) {
             return null
         }
 
-        const hasNextPage = methods.length > first
+        const hasNextPage = methods.length > limit
 
-        let edges: MethodModelEdge[] = []
+        let validEntries = methods
         if (hasNextPage) {
-            edges = methods
-                .slice(0, -1)
-                .map((m) => ({ node: transformMethodEntity(m), cursor: m.id }))
-        } else {
-            edges = methods.map((m) => ({
-                node: transformMethodEntity(m),
-                cursor: m.id,
-            }))
+            if (reverse) {
+                validEntries = methods.slice(1)
+            } else {
+                validEntries = methods.slice(0, -1)
+            }
         }
 
-        return {
-            edges,
-            pageInfo: {
-                hasNextPage: methods.length > first,
-                startCursor: edges.at(0).cursor,
-                endCursor: edges.at(-1).cursor,
-            },
-        }
-    }
-
-    @ResolveField()
-    async fields(
-        @Parent() klass: ClassModel,
-        @Args('first', { defaultValue: 10 }) first: number,
-        @Args('after', { defaultValue: '' }) after: string,
-    ): Promise<FieldModelConnection> {
-        const fields = await this.referenceService.findAllFieldsForClass(
-            klass.id,
-            first + 1,
-            after,
-        )
-
-        if (fields.length === 0) {
-            return null
-        }
-
-        const hasNextPage = fields.length > first
-
-        let edges: FieldModelEdge[] = []
-        if (hasNextPage) {
-            edges = fields
-                .slice(0, -1)
-                .map((f) => ({ node: transformFieldEntity(f), cursor: f.id }))
-        } else {
-            edges = fields.map((f) => ({
-                node: transformFieldEntity(f),
-                cursor: f.id,
-            }))
-        }
+        const edges = validEntries.map((m) => ({
+            node: transformMethodEntity(m),
+            cursor: m.id,
+        }))
 
         return {
             edges,
@@ -122,6 +86,63 @@ export class ClassResolver {
                 hasNextPage,
                 startCursor: edges.at(0).cursor,
                 endCursor: edges.at(-1).cursor,
+                forward: !reverse,
+            },
+        }
+    }
+
+    @ResolveField()
+    async fields(
+        @Parent() klass: ClassModel,
+        @Args('first', { nullable: true }) first?: number,
+        @Args('after', { nullable: true }) after?: string,
+        @Args('last', { nullable: true }) last?: number,
+        @Args('before', { nullable: true }) before?: string,
+    ): Promise<FieldModelConnection> {
+        let reverse = false
+        let limit = first || 10
+        let token = after || ''
+
+        if (!first && !after) {
+            reverse = !!(last || before)
+            limit = last || limit
+            token = before || token
+        }
+
+        const fields = await this.referenceService.findAllFieldsForClass(
+            klass.id,
+            limit + 1,
+            token,
+            reverse,
+        )
+
+        if (fields.length === 0) {
+            return null
+        }
+
+        const hasNextPage = fields.length > limit
+
+        let validFields = fields
+        if (hasNextPage) {
+            if (reverse) {
+                validFields = fields.slice(1)
+            } else {
+                validFields = fields.slice(0, -1)
+            }
+        }
+
+        const edges = validFields.map((f) => ({
+            node: transformFieldEntity(f),
+            cursor: f.id,
+        }))
+
+        return {
+            edges,
+            pageInfo: {
+                hasNextPage,
+                startCursor: edges.at(0).cursor,
+                endCursor: edges.at(-1).cursor,
+                forward: !reverse,
             },
         }
     }
@@ -134,27 +155,44 @@ export class ClassResolver {
     @ResolveField()
     async subClasses(
         @Parent() klass: ClassModel,
-        @Args('first', { defaultValue: 10 }) first: number,
-        @Args('after', { defaultValue: '' }) after: string,
+        @Args('first', { nullable: true }) first?: number,
+        @Args('after', { nullable: true }) after?: string,
+        @Args('last', { nullable: true }) last?: number,
+        @Args('before', { nullable: true }) before?: string,
     ): Promise<ClassModelConnection> {
+        let reverse = false
+        let limit = first || 10
+        let token = after || ''
+
+        if (!first && !after) {
+            reverse = !!(last || before)
+            limit = last || limit
+            token = before || token
+        }
+
         const classes = await this.classService.findSubClass(
             klass.id,
-            first,
-            after,
+            limit + 1,
+            token,
+            reverse,
         )
 
         if (classes.length === 0) {
             return null
         }
 
-        const hasNextPage = classes.length > first
+        const hasNextPage = classes.length > limit
 
-        let edges: ClassModelEdge[] = []
+        let validClasses = classes
         if (hasNextPage) {
-            edges = classes.slice(0, -1).map((c) => ({ node: c, cursor: c.id }))
-        } else {
-            edges = classes.map((c) => ({ node: c, cursor: c.id }))
+            if (reverse) {
+                validClasses = classes.slice(1)
+            } else {
+                validClasses = classes.slice(0, -1)
+            }
         }
+
+        const edges = validClasses.map((c) => ({ node: c, cursor: c.id }))
 
         return {
             edges,
@@ -162,6 +200,7 @@ export class ClassResolver {
                 hasNextPage,
                 startCursor: edges.at(0).cursor,
                 endCursor: edges.at(-1).cursor,
+                forward: !reverse,
             },
         }
     }
@@ -169,27 +208,44 @@ export class ClassResolver {
     @ResolveField()
     async implementedBy(
         @Parent() klass: ClassModel,
-        @Args('first', { defaultValue: 10 }) first: number,
-        @Args('after', { defaultValue: '' }) after: string,
+        @Args('first', { nullable: true }) first?: number,
+        @Args('after', { nullable: true }) after?: string,
+        @Args('last', { nullable: true }) last?: number,
+        @Args('before', { nullable: true }) before?: string,
     ): Promise<ClassModelConnection> {
+        let reverse = false
+        let limit = first || 10
+        let token = after || ''
+
+        if (!first && !after) {
+            reverse = !!(last || before)
+            limit = last || limit
+            token = before || token
+        }
+
         const classes = await this.classService.findImplementors(
             klass.id,
-            first,
-            after,
+            limit + 1,
+            token,
+            reverse,
         )
 
         if (classes.length === 0) {
             return null
         }
 
-        const hasNextPage = classes.length > first
+        const hasNextPage = classes.length > last
 
-        let edges: ClassModelEdge[] = []
+        let validClasses = classes
         if (hasNextPage) {
-            edges = classes.slice(0, -1).map((c) => ({ node: c, cursor: c.id }))
-        } else {
-            edges = classes.map((c) => ({ node: c, cursor: c.id }))
+            if (reverse) {
+                validClasses = classes.slice(1)
+            } else {
+                validClasses = classes.slice(0, -1)
+            }
         }
+
+        const edges = validClasses.map((c) => ({ node: c, cursor: c.id }))
 
         return {
             edges,
@@ -197,6 +253,7 @@ export class ClassResolver {
                 hasNextPage,
                 startCursor: edges.at(0).cursor,
                 endCursor: edges.at(-1).cursor,
+                forward: !reverse,
             },
         }
     }
@@ -204,27 +261,44 @@ export class ClassResolver {
     @ResolveField()
     async implements(
         @Parent() klass: ClassModel,
-        @Args('first', { defaultValue: 10 }) first: number,
-        @Args('after', { defaultValue: '' }) after: string,
+        @Args('first', { nullable: true }) first?: number,
+        @Args('after', { nullable: true }) after?: string,
+        @Args('last', { nullable: true }) last?: number,
+        @Args('before', { nullable: true }) before?: string,
     ): Promise<ClassModelConnection> {
+        let reverse = false
+        let limit = first || 10
+        let token = after || ''
+
+        if (!first && !after) {
+            reverse = !!(last || before)
+            limit = last || limit
+            token = before || token
+        }
+
         const classes = await this.classService.findImplemented(
             klass.id,
-            first,
-            after,
+            limit + 1,
+            token,
+            reverse,
         )
 
         if (classes.length === 0) {
             return null
         }
 
-        const hasNextPage = classes.length > first
+        const hasNextPage = classes.length > limit
 
-        let edges: ClassModelEdge[] = []
+        let validClasses = classes
         if (hasNextPage) {
-            edges = classes.slice(0, -1).map((c) => ({ node: c, cursor: c.id }))
-        } else {
-            edges = classes.map((c) => ({ node: c, cursor: c.id }))
+            if (reverse) {
+                validClasses = classes.slice(1)
+            } else {
+                validClasses = classes.slice(0, -1)
+            }
         }
+
+        const edges = validClasses.map((c) => ({ node: c, cursor: c.id }))
 
         return {
             edges,
@@ -232,6 +306,7 @@ export class ClassResolver {
                 hasNextPage,
                 startCursor: edges.at(0).cursor,
                 endCursor: edges.at(-1).cursor,
+                forward: !reverse,
             },
         }
     }

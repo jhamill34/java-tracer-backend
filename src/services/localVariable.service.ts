@@ -1,7 +1,7 @@
 import { Injectable } from '@nestjs/common'
 import { InjectRepository } from '@nestjs/typeorm'
 import { LocalVariableEntity } from 'src/entities/localVariable.entity'
-import { MoreThan, Repository } from 'typeorm'
+import { LessThan, MoreThan, Repository } from 'typeorm'
 
 @Injectable()
 export class LocalVariableService {
@@ -14,11 +14,12 @@ export class LocalVariableService {
         methodId: string,
         limit: number,
         token = '',
+        reverse = false,
     ): Promise<LocalVariableEntity[]> {
         const vars = await this.variableRepo.find({
             where: {
                 methodId,
-                id: MoreThan(token),
+                id: reverse ? LessThan(token) : MoreThan(token),
             },
             take: limit,
             order: {

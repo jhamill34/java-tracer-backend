@@ -10,4 +10,7 @@ export class PageInfo {
 
     @Field()
     endCursor: string
+
+    @Field(() => Boolean)
+    forward: boolean
 }

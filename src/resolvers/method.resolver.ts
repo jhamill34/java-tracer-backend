@@ -4,13 +4,9 @@ import { ClassModel } from 'src/models/class.model'
 import {
     InstructionModel,
     InstructionModelConnection,
-    InstructionModelEdge,
 } from 'src/models/instruction.model'
 import { MethodModel } from 'src/models/method.model'
-import {
-    VariableModelConnection,
-    VariableModelEdge,
-} from 'src/models/variable.model'
+import { VariableModelConnection } from 'src/models/variable.model'
 import { InstructionService } from 'src/services/instruction.service'
 import { LocalVariableService } from 'src/services/localVariable.service'
 import { ReferenceEntityService } from 'src/services/referenceEntity.service'
@@ -27,29 +23,44 @@ export class MethodResolver {
     @ResolveField()
     async variables(
         @Parent() method: MethodModel,
-        @Args('first', { defaultValue: 10 }) first: number,
-        @Args('after', { defaultValue: '' }) after: string,
+        @Args('first', { nullable: true }) first?: number,
+        @Args('after', { nullable: true }) after?: string,
+        @Args('last', { nullable: true }) last?: number,
+        @Args('before', { nullable: true }) before?: string,
     ): Promise<VariableModelConnection> {
+        let reverse = false
+        let limit = first || 10
+        let token = after || ''
+
+        if (!first && !after) {
+            reverse = !!(last || before)
+            limit = last || limit
+            token = before || token
+        }
+
         const variables = await this.variableService.findAllByMethodId(
             method.id,
-            first + 1,
-            after,
+            limit + 1,
+            token,
+            reverse,
         )
 
         if (variables.length === 0) {
             return null
         }
 
-        const hasNextPage = variables.length > first
+        const hasNextPage = variables.length > limit
 
-        let edges: VariableModelEdge[] = []
+        let validVars = variables
         if (hasNextPage) {
-            edges = variables
-                .slice(0, -1)
-                .map((v) => ({ node: v, cursor: v.id }))
-        } else {
-            edges = variables.map((v) => ({ node: v, cursor: v.id }))
+            if (reverse) {
+                validVars = variables.slice(1)
+            } else {
+                validVars = variables.slice(0, -1)
+            }
         }
+
+        const edges = validVars.map((v) => ({ node: v, cursor: v.id }))
 
         return {
             edges,
@@ -57,6 +68,7 @@ export class MethodResolver {
                 hasNextPage,
                 startCursor: edges.at(0).cursor,
                 endCursor: edges.at(-1).cursor,
+                forward: !reverse,
             },
         }
     }
@@ -64,36 +76,50 @@ export class MethodResolver {
     @ResolveField()
     async instructions(
         @Parent() method: MethodModel,
-        @Args('first', { defaultValue: 10 }) first: number,
-        @Args('after', { defaultValue: '' }) after: string,
+        @Args('first', { nullable: true }) first?: number,
+        @Args('after', { nullable: true }) after?: string,
+        @Args('last', { nullable: true }) last?: number,
+        @Args('before', { nullable: true }) before?: string,
         @Args('opCodes', { defaultValue: [], type: () => [OpCode] })
-        opCodes: OpCode[],
+        opCodes?: OpCode[],
     ): Promise<InstructionModelConnection> {
+        let reverse = false
+        let limit = first || 10
+        let token = after || ''
+
+        if (!first && !after) {
+            reverse = !!(last || before)
+            limit = last || limit
+            token = before || token
+        }
+
         const instructions = await this.instructionService.findAllByMethodId(
             method.id,
-            first + 1,
-            after,
+            limit + 1,
+            token,
             opCodes,
+            reverse,
         )
 
         if (instructions.length === 0) {
             return null
         }
 
-        const hasNextPage = instructions.length > first
+        const hasNextPage = instructions.length > limit
 
-        let edges: InstructionModelEdge[] = []
+        let validInstructions = instructions
         if (hasNextPage) {
-            edges = instructions.slice(0, -1).map((i) => ({
-                node: transformInstructionEntity(i),
-                cursor: i.id,
-            }))
-        } else {
-            edges = instructions.map((i) => ({
-                node: transformInstructionEntity(i),
-                cursor: i.id,
-            }))
+            if (reverse) {
+                validInstructions = instructions.slice(1)
+            } else {
+                validInstructions = instructions.slice(0, -1)
+            }
         }
+
+        const edges = validInstructions.map((i) => ({
+            node: transformInstructionEntity(i),
+            cursor: i.id,
+        }))
 
         return {
             edges,
@@ -101,6 +127,7 @@ export class MethodResolver {
                 hasNextPage,
                 startCursor: edges.at(0).cursor,
                 endCursor: edges.at(-1).cursor,
+                forward: !reverse,
             },
         }
     }

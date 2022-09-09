@@ -4,10 +4,7 @@ import { MethodEntity } from 'src/entities/method.entity'
 import { FieldModel } from 'src/models/field.model'
 import { InstructionModel } from 'src/models/instruction.model'
 import { MethodModel } from 'src/models/method.model'
-import {
-    VariableModelConnection,
-    VariableModelEdge,
-} from 'src/models/variable.model'
+import { VariableModelConnection } from 'src/models/variable.model'
 import { InstructionService } from 'src/services/instruction.service'
 import { transformFieldEntity, transformMethodEntity } from './class.resolver'
 
@@ -62,30 +59,45 @@ export class InstructionResolver {
     @ResolveField()
     async enteringVariables(
         @Parent() instructionModel: InstructionModel,
-        @Args('first', { defaultValue: 10 }) first: number,
-        @Args('after', { defaultValue: '' }) after: string,
+        @Args('first', { nullable: true }) first?: number,
+        @Args('after', { nullable: true }) after?: string,
+        @Args('last', { nullable: true }) last?: number,
+        @Args('before', { nullable: true }) before?: string,
     ): Promise<VariableModelConnection> {
+        let reverse = false
+        let limit = first || 10
+        let token = after || ''
+
+        if (!first && !after) {
+            reverse = !!(last || before)
+            limit = last || limit
+            token = before || token
+        }
+
         const variables =
             await this.instructionService.findEnteringVariablesById(
                 instructionModel.id,
-                first + 1,
-                after,
+                limit + 1,
+                token,
+                reverse,
             )
 
         if (variables.length === 0) {
             return null
         }
 
-        const hasNextPage = variables.length > first
+        const hasNextPage = variables.length > limit
 
-        let edges: VariableModelEdge[] = []
+        let validVars = variables
         if (hasNextPage) {
-            edges = variables
-                .slice(0, -1)
-                .map((v) => ({ node: v, cursor: v.id }))
-        } else {
-            edges = variables.map((v) => ({ node: v, cursor: v.id }))
+            if (reverse) {
+                validVars = variables.slice(1)
+            } else {
+                validVars = variables.slice(0, -1)
+            }
         }
+
+        const edges = validVars.map((v) => ({ node: v, cursor: v.id }))
 
         return {
             edges,
@@ -93,6 +105,7 @@ export class InstructionResolver {
                 hasNextPage,
                 startCursor: edges.at(0).cursor,
                 endCursor: edges.at(-1).cursor,
+                forward: !reverse,
             },
         }
     }
@@ -100,30 +113,45 @@ export class InstructionResolver {
     @ResolveField()
     async exitingVariables(
         @Parent() instructionModel: InstructionModel,
-        @Args('first', { defaultValue: 10 }) first: number,
-        @Args('after', { defaultValue: '' }) after: string,
+        @Args('first', { nullable: true }) first?: number,
+        @Args('after', { nullable: true }) after?: string,
+        @Args('last', { nullable: true }) last?: number,
+        @Args('before', { nullable: true }) before?: string,
     ): Promise<VariableModelConnection> {
+        let reverse = false
+        let limit = first || 10
+        let token = after || ''
+
+        if (!first && !after) {
+            reverse = !!(last || before)
+            limit = last || limit
+            token = before || token
+        }
+
         const variables =
             await this.instructionService.findExitingVariablesById(
                 instructionModel.id,
-                first + 1,
-                after,
+                limit + 1,
+                token,
+                reverse,
             )
 
         if (variables.length === 0) {
             return null
         }
 
-        const hasNextPage = variables.length > first
+        const hasNextPage = variables.length > limit
 
-        let edges: VariableModelEdge[] = []
+        let validVars = variables
         if (hasNextPage) {
-            edges = variables
-                .slice(0, -1)
-                .map((v) => ({ node: v, cursor: v.id }))
-        } else {
-            edges = variables.map((v) => ({ node: v, cursor: v.id }))
+            if (reverse) {
+                validVars = variables.slice(1)
+            } else {
+                validVars = variables.slice(0, -1)
+            }
         }
+
+        const edges = validVars.map((v) => ({ node: v, cursor: v.id }))
 
         return {
             edges,
@@ -131,6 +159,7 @@ export class InstructionResolver {
                 hasNextPage,
                 startCursor: edges.at(0).cursor,
                 endCursor: edges.at(-1).cursor,
+                forward: !reverse,
             },
         }
     }

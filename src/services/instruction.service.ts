@@ -6,7 +6,7 @@ import { LocalVariableEntity } from 'src/entities/localVariable.entity'
 import { MethodEntity } from 'src/entities/method.entity'
 import { ReferenceEntity } from 'src/entities/reference.entity'
 import { OpCode } from 'src/util/opcodeUtil'
-import { In, MoreThan, MoreThanOrEqual, Repository } from 'typeorm'
+import { In, LessThan, MoreThan, MoreThanOrEqual, Repository } from 'typeorm'
 
 @Injectable()
 export class InstructionService {
@@ -21,9 +21,15 @@ export class InstructionService {
         id: string,
         limit: number,
         token: string,
+        reverse = false,
     ): Promise<LocalVariableEntity[]> {
         const instr = await this.instructionRepo.findOne({
-            where: { id, enteringVariables: { id: MoreThan(token) } },
+            where: {
+                id,
+                enteringVariables: {
+                    id: reverse ? LessThan(token) : MoreThan(token),
+                },
+            },
             relations: { enteringVariables: true },
             order: {
                 enteringVariables: { id: 'asc' },
@@ -42,9 +48,15 @@ export class InstructionService {
         id: string,
         limit: number,
         token: string,
+        reverse = false,
     ): Promise<LocalVariableEntity[]> {
         const instr = await this.instructionRepo.findOne({
-            where: { id, exitingVariables: { id: MoreThan(token) } },
+            where: {
+                id,
+                exitingVariables: {
+                    id: reverse ? LessThan(token) : MoreThan(token),
+                },
+            },
             relations: { exitingVariables: true },
             order: {
                 exitingVariables: { id: 'asc' },
@@ -92,11 +104,12 @@ export class InstructionService {
         limit: number,
         token = '',
         opCodes: OpCode[],
+        reverse = false,
     ): Promise<InstructionEntity[]> {
         const instr = this.instructionRepo.find({
             where: {
                 invokedById: methodId,
-                id: MoreThan(token),
+                id: reverse ? LessThan(token) : MoreThan(token),
                 opCode:
                     opCodes.length === 0
                         ? MoreThanOrEqual(OpCode.UNKNOWN)
