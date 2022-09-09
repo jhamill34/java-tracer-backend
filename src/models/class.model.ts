@@ -2,7 +2,6 @@ import { Field, ObjectType } from '@nestjs/graphql'
 import { ClassModelConnection } from './classconnection.model'
 import { FieldModelConnection } from './field.model'
 import { MethodModelConnection } from './method.model'
-import { PageInfo } from './pageinfo.model'
 
 @ObjectType()
 export class ClassModel {

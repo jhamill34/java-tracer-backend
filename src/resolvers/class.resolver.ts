@@ -1,11 +1,16 @@
 import { Args, Parent, Query, ResolveField, Resolver } from '@nestjs/graphql'
 import { MethodEntity } from 'src/entities/method.entity'
+import { KnownClassEntity } from 'src/entities/knownClass.entity'
 import { ClassModel } from 'src/models/class.model'
 import {
     ClassModelConnection,
     ClassModelEdge,
 } from 'src/models/classconnection.model'
-import { FieldModelConnection, FieldModelEdge } from 'src/models/field.model'
+import {
+    FieldModel,
+    FieldModelConnection,
+    FieldModelEdge,
+} from 'src/models/field.model'
 import {
     MethodModel,
     MethodModelConnection,
@@ -13,6 +18,12 @@ import {
 } from 'src/models/method.model'
 import { ClassService } from 'src/services/class.service'
 import { ReferenceEntityService } from 'src/services/referenceEntity.service'
+import {
+    translateClassAccess,
+    translateFieldAccess,
+    translateMethodAccess,
+} from 'src/util/accessMaskUtil'
+import { FieldEntity } from 'src/entities/field.entity'
 
 @Resolver(() => ClassModel)
 export class ClassResolver {
@@ -23,7 +34,16 @@ export class ClassResolver {
 
     @Query(() => ClassModel)
     async getClass(@Args('name') name: string): Promise<ClassModel> {
-        return await this.classService.findByName(name)
+        const klass = await this.classService.findByName(name)
+
+        const model: ClassModel = { ...klass }
+        if (klass instanceof KnownClassEntity) {
+            model.modifiers = translateClassAccess(klass.modifiers)
+        } else {
+            model.modifiers = []
+        }
+
+        return model
     }
 
     @ResolveField()
@@ -86,9 +106,14 @@ export class ClassResolver {
 
         let edges: FieldModelEdge[] = []
         if (hasNextPage) {
-            edges = fields.slice(0, -1).map((f) => ({ node: f, cursor: f.id }))
+            edges = fields
+                .slice(0, -1)
+                .map((f) => ({ node: transformFieldEntity(f), cursor: f.id }))
         } else {
-            edges = fields.map((f) => ({ node: f, cursor: f.id }))
+            edges = fields.map((f) => ({
+                node: transformFieldEntity(f),
+                cursor: f.id,
+            }))
         }
 
         return {
@@ -212,9 +237,28 @@ export class ClassResolver {
     }
 }
 
-function transformMethodEntity(m: MethodEntity): MethodModel {
-    const { id, name, descriptor, signature, modifiers } = m
+export function transformMethodEntity(m: MethodEntity): MethodModel {
+    const { id, name, descriptor, signature, modifiers: methodModifiers } = m
+
+    const modifiers = translateMethodAccess(methodModifiers)
+
     return {
+        type: 'method',
+        id,
+        name,
+        descriptor,
+        signature,
+        modifiers,
+    }
+}
+
+export function transformFieldEntity(f: FieldEntity): FieldModel {
+    const { id, name, descriptor, signature, modifiers: fieldModifiers } = f
+
+    const modifiers = translateFieldAccess(fieldModifiers)
+
+    return {
+        type: 'field',
         id,
         name,
         descriptor,

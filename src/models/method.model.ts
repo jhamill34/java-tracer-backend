@@ -6,6 +6,8 @@ import { VariableModelConnection } from './variable.model'
 
 @ObjectType()
 export class MethodModel {
+    type = 'method'
+
     @Field(() => ID)
     id: string
 

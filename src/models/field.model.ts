@@ -4,6 +4,8 @@ import { PageInfo } from './pageinfo.model'
 
 @ObjectType()
 export class FieldModel {
+    type = 'field'
+
     @Field()
     id: string
 

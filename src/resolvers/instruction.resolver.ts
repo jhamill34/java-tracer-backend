@@ -1,4 +1,6 @@
 import { Args, Parent, ResolveField, Resolver } from '@nestjs/graphql'
+import { FieldEntity } from 'src/entities/field.entity'
+import { MethodEntity } from 'src/entities/method.entity'
 import { FieldModel } from 'src/models/field.model'
 import { InstructionModel } from 'src/models/instruction.model'
 import { MethodModel } from 'src/models/method.model'
@@ -7,6 +9,7 @@ import {
     VariableModelEdge,
 } from 'src/models/variable.model'
 import { InstructionService } from 'src/services/instruction.service'
+import { transformFieldEntity, transformMethodEntity } from './class.resolver'
 
 @Resolver(() => InstructionModel)
 export class InstructionResolver {
@@ -32,18 +35,28 @@ export class InstructionResolver {
     async reference(
         @Parent() instructionModel: InstructionModel,
     ): Promise<MethodModel | FieldModel> {
-        return await this.instructionService.findReferenceById(
+        const ref = await this.instructionService.findReferenceById(
             instructionModel.id,
         )
+
+        if (ref instanceof MethodEntity) {
+            return transformMethodEntity(ref)
+        } else if (ref instanceof FieldEntity) {
+            return transformFieldEntity(ref)
+        }
+
+        return null
     }
 
     @ResolveField()
     async invokedBy(
         @Parent() instructionModel: InstructionModel,
     ): Promise<MethodModel> {
-        return await this.instructionService.findInvokedById(
+        const method = await this.instructionService.findInvokedById(
             instructionModel.id,
         )
+
+        return transformMethodEntity(method)
     }
 
     @ResolveField()

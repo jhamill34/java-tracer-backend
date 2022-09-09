@@ -24,8 +24,8 @@ export abstract class ReferenceEntity extends AbstractRecord {
     @Column({ nullable: true })
     signature?: string
 
-    @Column('simple-array')
-    modifiers: string[]
+    @Column()
+    modifiers: number
 
     @Column()
     @Index()

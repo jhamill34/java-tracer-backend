@@ -19,8 +19,8 @@ export class KnownClassEntity extends AbstractClassEntity {
     })
     signature?: string
 
-    @Column('simple-array')
-    modifiers: string[]
+    @Column()
+    modifiers: number
 
     @OneToMany(() => MethodEntity, (method) => method.class, {
         createForeignKeyConstraints: false,
