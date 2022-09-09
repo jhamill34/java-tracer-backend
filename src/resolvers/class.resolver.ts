@@ -1,11 +1,17 @@
-import { Args, Parent, Query, ResolveField, Resolver } from '@nestjs/graphql'
+import {
+    Args,
+    Context,
+    Parent,
+    Query,
+    ResolveField,
+    Resolver,
+} from '@nestjs/graphql'
 import { MethodEntity } from 'src/entities/method.entity'
 import { KnownClassEntity } from 'src/entities/knownClass.entity'
 import { ClassModel, ClassModelConnection } from 'src/models/class.model'
 import { FieldModel, FieldModelConnection } from 'src/models/field.model'
 import { MethodModel, MethodModelConnection } from 'src/models/method.model'
 import { ClassService } from 'src/services/class.service'
-import { ReferenceEntityService } from 'src/services/referenceEntity.service'
 import {
     translateClassAccess,
     translateFieldAccess,
@@ -15,13 +21,11 @@ import { FieldEntity } from 'src/entities/field.entity'
 import { paginate, PaginationArgs } from 'src/util/paginationUtil'
 import { AbstractClassEntity } from 'src/entities/abstractClass.entity'
 import { UnknownClassEntity } from 'src/entities/unknownClass.entity'
+import { RequestContext } from 'src/util/context'
 
 @Resolver(() => ClassModel)
 export class ClassResolver {
-    constructor(
-        private readonly classService: ClassService,
-        private readonly referenceService: ReferenceEntityService,
-    ) {}
+    constructor(private readonly classService: ClassService) {}
 
     @Query(() => ClassModel)
     async getClass(@Args('name') name: string): Promise<ClassModel> {
@@ -40,69 +44,77 @@ export class ClassResolver {
     @ResolveField()
     async methods(
         @Parent() klass: ClassModel,
+        @Context() ctx: RequestContext,
         @Args() args: PaginationArgs,
     ): Promise<MethodModelConnection> {
-        const methods = await this.referenceService.findAllMethodsForClasses([
-            klass.id,
-        ])
+        const method =
+            await ctx.loaders.referenceLoaders.classMethodsLoader.load(klass.id)
 
-        return paginate(methods[0], args, transformMethodEntity)
+        return paginate(method, args, transformMethodEntity)
     }
 
     @ResolveField()
     async fields(
         @Parent() klass: ClassModel,
+        @Context() ctx: RequestContext,
         @Args() args: PaginationArgs,
     ): Promise<FieldModelConnection> {
-        const fields = await this.referenceService.findAllFieldsForClasses([
+        const field = await ctx.loaders.referenceLoaders.classFieldsLoader.load(
             klass.id,
-        ])
+        )
 
-        return paginate(fields[0], args, transformFieldEntity)
+        return paginate(field, args, transformFieldEntity)
     }
 
     @ResolveField()
-    async superClass(@Parent() klass: ClassModel): Promise<ClassModel> {
-        const result = await this.classService.findSuperClassForClasses([
+    async superClass(
+        @Parent() klass: ClassModel,
+        @Context() ctx: RequestContext,
+    ): Promise<ClassModel> {
+        const result = await ctx.loaders.classLoaders.superClassLoader.load(
             klass.id,
-        ])
-        return result[0][0]
+        )
+
+        return transformClassEntity(result[0])[0]
     }
 
     @ResolveField()
     async subClasses(
         @Parent() klass: ClassModel,
+        @Context() ctx: RequestContext,
         @Args() args: PaginationArgs,
     ): Promise<ClassModelConnection> {
-        const classes = await this.classService.findSubClassesForClasses([
+        const result = await ctx.loaders.classLoaders.subClassLoader.load(
             klass.id,
-        ])
+        )
 
-        return paginate(classes[0], args, transformClassEntity)
+        return paginate(result, args, transformClassEntity)
     }
 
     @ResolveField()
     async implementedBy(
         @Parent() klass: ClassModel,
+        @Context() ctx: RequestContext,
         @Args() args: PaginationArgs,
     ): Promise<ClassModelConnection> {
-        const classes = await this.classService.findImplementorsForClasses([
+        const result = await ctx.loaders.classLoaders.implementorLoader.load(
             klass.id,
-        ])
+        )
 
-        return paginate(classes[0], args, transformClassEntity)
+        return paginate(result, args, transformClassEntity)
     }
 
     @ResolveField()
     async implements(
         @Parent() klass: ClassModel,
+        @Context() ctx: RequestContext,
         @Args() args: PaginationArgs,
     ): Promise<ClassModelConnection> {
-        const classes = await this.classService.findImplementedForClasses([
+        const result = await ctx.loaders.classLoaders.implementedLoader.load(
             klass.id,
-        ])
+        )
 
-        return paginate(classes[0], args, transformClassEntity)
+        return paginate(result, args, transformClassEntity)
     }
 }
 

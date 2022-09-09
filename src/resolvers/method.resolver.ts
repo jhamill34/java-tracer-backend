@@ -1,4 +1,4 @@
-import { Args, Parent, ResolveField, Resolver } from '@nestjs/graphql'
+import { Args, Context, Parent, ResolveField, Resolver } from '@nestjs/graphql'
 import { InstructionEntity } from 'src/entities/instruction.entity'
 import { ClassModel } from 'src/models/class.model'
 import {
@@ -7,50 +7,49 @@ import {
 } from 'src/models/instruction.model'
 import { MethodModel } from 'src/models/method.model'
 import { VariableModelConnection } from 'src/models/variable.model'
-import { InstructionService } from 'src/services/instruction.service'
-import { LocalVariableService } from 'src/services/localVariable.service'
-import { ReferenceEntityService } from 'src/services/referenceEntity.service'
+import { RequestContext } from 'src/util/context'
 import { paginate, PaginationArgs } from 'src/util/paginationUtil'
+import { transformClassEntity } from './class.resolver'
 import { transformLocalVariableEntity } from './instruction.resolver'
 
 @Resolver(() => MethodModel)
 export class MethodResolver {
-    constructor(
-        private readonly variableService: LocalVariableService,
-        private readonly instructionService: InstructionService,
-        private readonly referenceService: ReferenceEntityService,
-    ) {}
-
     @ResolveField()
     async variables(
         @Parent() method: MethodModel,
+        @Context() ctx: RequestContext,
         @Args() args: PaginationArgs,
     ): Promise<VariableModelConnection> {
-        const variables = await this.variableService.findAllByMethodIds([
+        const variable = await ctx.loaders.variableLoaders.forMethodLoader.load(
             method.id,
-        ])
+        )
 
-        return paginate(variables[0], args, transformLocalVariableEntity)
+        return paginate(variable, args, transformLocalVariableEntity)
     }
 
     @ResolveField()
     async instructions(
         @Parent() method: MethodModel,
+        @Context() ctx: RequestContext,
         @Args() args: PaginationArgs,
     ): Promise<InstructionModelConnection> {
-        const instructions = await this.instructionService.findAllByMethodIds([
-            method.id,
-        ])
+        const instructions =
+            await ctx.loaders.instructionLoaders.fromInvokedByLoader.load(
+                method.id,
+            )
 
-        return paginate(instructions[0], args, transformInstructionEntity)
+        return paginate(instructions, args, transformInstructionEntity)
     }
 
     @ResolveField()
-    async owner(@Parent() method: MethodModel): Promise<ClassModel> {
-        const owner = await this.referenceService.findOwnerForMethodIds([
+    async owner(
+        @Parent() method: MethodModel,
+        @Context() ctx: RequestContext,
+    ): Promise<ClassModel> {
+        const owner = await ctx.loaders.referenceLoaders.methodOwnerLoader.load(
             method.id,
-        ])
-        return owner[0]
+        )
+        return transformClassEntity(owner)[0]
     }
 }
 

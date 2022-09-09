@@ -16,55 +16,70 @@ import { MethodEntity } from 'src/entities/method.entity'
 import { ReferenceEntity } from 'src/entities/reference.entity'
 import { UnknownClassEntity } from 'src/entities/unknownClass.entity'
 import { UserEntity } from 'src/entities/user.entity'
+import { DataLoaderService } from 'src/services/dataloader.service'
+import { RequestContext } from 'src/util/context'
 import { ClassModule } from './class.module'
+import { DataLoaderModule } from './dataloader.module'
 import { UsersModule } from './users.module'
 
 @Module({
     imports: [
-        GraphQLModule.forRoot<ApolloDriverConfig>({
-            driver: ApolloDriver,
-            debug: false,
-            playground: true,
-            autoSchemaFile: true,
-        }),
-        TypeOrmModule.forRoot({
-            type: 'postgres',
-            host: 'localhost',
-            username: 'joshrasm',
-            database: 'javatrace',
-            port: 5432,
-            cache: {
-                type: 'redis',
-                options: {
-                    host: 'localhost',
-                    port: 6379,
+        TypeOrmModule.forRootAsync({
+            useFactory: () => ({
+                type: 'postgres',
+                host: 'localhost',
+                username: 'joshrasm',
+                database: 'javatrace',
+                port: 5432,
+                cache: {
+                    type: 'redis',
+                    options: {
+                        host: 'localhost',
+                        port: 6379,
+                    },
+                    duration: 120000, // 2 minutes
                 },
-                duration: 120000, // 2 minutes
+                entities: [
+                    ClassClosureEntity,
+                    ExtendsEntity,
+                    ImplementsEntity,
+                    InstructionClosureEntity,
+
+                    AbstractClassEntity,
+                    FieldEntity,
+                    InstructionEntity,
+                    KnownClassEntity,
+                    LocalVariableEntity,
+                    MethodEntity,
+                    ReferenceEntity,
+                    UnknownClassEntity,
+
+                    JobEntity,
+
+                    UserEntity,
+                ],
+                synchronize: true,
+                logging: true,
+            }),
+        }),
+        GraphQLModule.forRootAsync<ApolloDriverConfig>({
+            driver: ApolloDriver,
+            imports: [DataLoaderModule],
+            useFactory: (dataloaderService: DataLoaderService) => {
+                return {
+                    debug: false,
+                    playground: true,
+                    autoSchemaFile: true,
+                    context: (): RequestContext => ({
+                        loaders: dataloaderService.getLoaders(),
+                    }),
+                }
             },
-            entities: [
-                ClassClosureEntity,
-                ExtendsEntity,
-                ImplementsEntity,
-                InstructionClosureEntity,
-
-                AbstractClassEntity,
-                FieldEntity,
-                InstructionEntity,
-                KnownClassEntity,
-                LocalVariableEntity,
-                MethodEntity,
-                ReferenceEntity,
-                UnknownClassEntity,
-
-                JobEntity,
-
-                UserEntity,
-            ],
-            synchronize: true,
-            logging: true,
+            inject: [DataLoaderService],
         }),
         UsersModule,
         ClassModule,
+        DataLoaderModule,
     ],
 })
 export class AppModule {}

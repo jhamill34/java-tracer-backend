@@ -1,4 +1,4 @@
-import { Args, Parent, ResolveField, Resolver } from '@nestjs/graphql'
+import { Args, Context, Parent, ResolveField, Resolver } from '@nestjs/graphql'
 import { FieldEntity } from 'src/entities/field.entity'
 import { LocalVariableEntity } from 'src/entities/localVariable.entity'
 import { MethodEntity } from 'src/entities/method.entity'
@@ -9,47 +9,45 @@ import {
     VariableModel,
     VariableModelConnection,
 } from 'src/models/variable.model'
-import { InstructionService } from 'src/services/instruction.service'
+import { RequestContext } from 'src/util/context'
 import { paginate, PaginationArgs } from 'src/util/paginationUtil'
 import { transformFieldEntity, transformMethodEntity } from './class.resolver'
 
 @Resolver(() => InstructionModel)
 export class InstructionResolver {
-    constructor(private readonly instructionService: InstructionService) {}
-
     @ResolveField()
     async next(
         @Parent() instructionModel: InstructionModel,
+        @Context() ctx: RequestContext,
     ): Promise<string[]> {
-        const edges = await this.instructionService.findNextByInstructionIds([
+        const edge = await ctx.loaders.instructionLoaders.nextLoader.load(
             instructionModel.id,
-        ])
+        )
 
-        return edges[0].map((e) => e.childId)
+        return edge.map((e) => e.childId)
     }
 
     @ResolveField()
     async previous(
         @Parent() instructionModel: InstructionModel,
+        @Context() ctx: RequestContext,
     ): Promise<string[]> {
-        const edges =
-            await this.instructionService.findPreviousByInstructionIds([
-                instructionModel.id,
-            ])
+        const edge = await ctx.loaders.instructionLoaders.previousLoader.load(
+            instructionModel.id,
+        )
 
-        return edges[0].map((e) => e.ancestorId)
+        return edge.map((e) => e.ancestorId)
     }
 
     @ResolveField()
     async reference(
         @Parent() instructionModel: InstructionModel,
+        @Context() ctx: RequestContext,
     ): Promise<MethodModel | FieldModel> {
-        const refs =
-            await this.instructionService.findReferenceByInstructionIds([
-                instructionModel.id,
-            ])
+        const ref = await ctx.loaders.instructionLoaders.referencesLoader.load(
+            instructionModel.id,
+        )
 
-        const ref = refs[0]
         if (ref instanceof MethodEntity) {
             return transformMethodEntity(ref)[0]
         } else if (ref instanceof FieldEntity) {
@@ -62,39 +60,42 @@ export class InstructionResolver {
     @ResolveField()
     async invokedBy(
         @Parent() instructionModel: InstructionModel,
+        @Context() ctx: RequestContext,
     ): Promise<MethodModel> {
         const method =
-            await this.instructionService.findInvokedForInstructionIds([
+            await ctx.loaders.instructionLoaders.invokedByLoader.load(
                 instructionModel.id,
-            ])
+            )
 
-        return transformMethodEntity(method[0])[0]
+        return transformMethodEntity(method)[0]
     }
 
     @ResolveField()
     async enteringVariables(
         @Parent() instructionModel: InstructionModel,
+        @Context() ctx: RequestContext,
         @Args() args: PaginationArgs,
     ): Promise<VariableModelConnection> {
-        const variables =
-            await this.instructionService.findEnteringVariablesForInstructionIds(
-                [instructionModel.id],
+        const variable =
+            await ctx.loaders.instructionLoaders.enteringVariablesLoader.load(
+                instructionModel.id,
             )
 
-        return paginate(variables[0], args, transformLocalVariableEntity)
+        return paginate(variable, args, transformLocalVariableEntity)
     }
 
     @ResolveField()
     async exitingVariables(
         @Parent() instructionModel: InstructionModel,
+        @Context() ctx: RequestContext,
         @Args() args: PaginationArgs,
     ): Promise<VariableModelConnection> {
-        const variables =
-            await this.instructionService.findExitingVariablesForInstructionIds(
-                [instructionModel.id],
+        const variable =
+            await ctx.loaders.instructionLoaders.exitingVariablesLoader.load(
+                instructionModel.id,
             )
 
-        return paginate(variables[0], args, transformLocalVariableEntity)
+        return paginate(variable, args, transformLocalVariableEntity)
     }
 }
 
