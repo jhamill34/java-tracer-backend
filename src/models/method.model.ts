@@ -1,4 +1,4 @@
-import { Field, ID, ObjectType } from '@nestjs/graphql'
+import { Field, ObjectType } from '@nestjs/graphql'
 import { Paginated } from 'src/util/paginationUtil'
 import { ClassModel } from './class.model'
 import { InstructionModelConnection } from './instruction.model'
@@ -8,7 +8,7 @@ import { VariableModelConnection } from './variable.model'
 export class MethodModel {
     type = 'method'
 
-    @Field(() => ID)
+    @Field()
     id: string
 
     @Field()
