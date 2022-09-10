@@ -70,7 +70,7 @@ export class InstructionService {
             cache: true,
         })
 
-        return ids.map((id) => instr.find((i) => i.id === id).invokedBy)
+        return ids.map((id) => instr.find((i) => i.id === id).reference)
     }
 
     async findAllByMethodIds(

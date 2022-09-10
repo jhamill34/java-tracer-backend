@@ -24,7 +24,11 @@ export class InstructionResolver {
             instructionModel.id,
         )
 
-        return edge.map((e) => e.childId)
+        if (edge) {
+            return edge.map((e) => e.childId)
+        }
+
+        return []
     }
 
     @ResolveField()
@@ -36,7 +40,11 @@ export class InstructionResolver {
             instructionModel.id,
         )
 
-        return edge.map((e) => e.ancestorId)
+        if (edge) {
+            return edge.map((e) => e.ancestorId)
+        }
+
+        return []
     }
 
     @ResolveField()
