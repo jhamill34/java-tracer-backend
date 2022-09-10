@@ -1,6 +1,5 @@
 import { Field, ObjectType } from '@nestjs/graphql'
 import { Paginated } from 'src/util/paginationUtil'
-import { ClassModel } from './class.model'
 
 @ObjectType()
 export class FieldModel {
@@ -20,9 +19,6 @@ export class FieldModel {
 
     @Field(() => [String], { nullable: true })
     modifiers?: string[]
-
-    @Field(() => ClassModel, { nullable: true })
-    owner?: ClassModel
 }
 
 @ObjectType()

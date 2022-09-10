@@ -9,7 +9,6 @@ import { OpCode } from 'src/util/opcodeUtil'
 import { Paginated } from 'src/util/paginationUtil'
 import { FieldModel } from './field.model'
 import { MethodModel } from './method.model'
-import { VariableModelConnection } from './variable.model'
 
 registerEnumType(OpCode, {
     name: 'OpCodeEnum',
@@ -44,24 +43,6 @@ export class InstructionModel {
 
     @Field(() => [String])
     stack: string[]
-
-    @Field(() => MethodModel)
-    invokedBy?: MethodModel
-
-    @Field(() => ReferenceModel, { nullable: true })
-    reference?: MethodModel | FieldModel
-
-    @Field(() => [String], { nullable: true })
-    next?: string[]
-
-    @Field(() => [String], { nullable: true })
-    previous?: string[]
-
-    @Field(() => VariableModelConnection, { nullable: true })
-    enteringVariables?: VariableModelConnection
-
-    @Field(() => VariableModelConnection, { nullable: true })
-    exitingVariables?: VariableModelConnection
 }
 
 @ObjectType()

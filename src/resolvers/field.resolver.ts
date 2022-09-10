@@ -6,7 +6,7 @@ import { transformClassEntity } from './class.resolver'
 
 @Resolver(() => FieldModel)
 export class FieldResolver {
-    @ResolveField()
+    @ResolveField(() => ClassModel)
     async owner(
         @Parent() field: FieldModel,
         @Context() ctx: RequestContext,

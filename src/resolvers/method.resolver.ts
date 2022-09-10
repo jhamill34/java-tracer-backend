@@ -14,7 +14,9 @@ import { transformLocalVariableEntity } from './instruction.resolver'
 
 @Resolver(() => MethodModel)
 export class MethodResolver {
-    @ResolveField()
+    // TODO: Toplevel search for methods
+
+    @ResolveField(() => VariableModelConnection)
     async variables(
         @Parent() method: MethodModel,
         @Context() ctx: RequestContext,
@@ -27,7 +29,7 @@ export class MethodResolver {
         return paginate(variable, args, transformLocalVariableEntity)
     }
 
-    @ResolveField()
+    @ResolveField(() => InstructionModelConnection)
     async instructions(
         @Parent() method: MethodModel,
         @Context() ctx: RequestContext,
@@ -41,7 +43,7 @@ export class MethodResolver {
         return paginate(instructions, args, transformInstructionEntity)
     }
 
-    @ResolveField()
+    @ResolveField(() => ClassModel)
     async owner(
         @Parent() method: MethodModel,
         @Context() ctx: RequestContext,

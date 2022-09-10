@@ -3,7 +3,7 @@ import { FieldEntity } from 'src/entities/field.entity'
 import { LocalVariableEntity } from 'src/entities/localVariable.entity'
 import { MethodEntity } from 'src/entities/method.entity'
 import { FieldModel } from 'src/models/field.model'
-import { InstructionModel } from 'src/models/instruction.model'
+import { InstructionModel, ReferenceModel } from 'src/models/instruction.model'
 import { MethodModel } from 'src/models/method.model'
 import {
     VariableModel,
@@ -15,7 +15,7 @@ import { transformFieldEntity, transformMethodEntity } from './class.resolver'
 
 @Resolver(() => InstructionModel)
 export class InstructionResolver {
-    @ResolveField()
+    @ResolveField(() => [String])
     async next(
         @Parent() instructionModel: InstructionModel,
         @Context() ctx: RequestContext,
@@ -31,7 +31,7 @@ export class InstructionResolver {
         return []
     }
 
-    @ResolveField()
+    @ResolveField(() => [String])
     async previous(
         @Parent() instructionModel: InstructionModel,
         @Context() ctx: RequestContext,
@@ -47,7 +47,7 @@ export class InstructionResolver {
         return []
     }
 
-    @ResolveField()
+    @ResolveField(() => ReferenceModel)
     async reference(
         @Parent() instructionModel: InstructionModel,
         @Context() ctx: RequestContext,
@@ -65,7 +65,7 @@ export class InstructionResolver {
         return null
     }
 
-    @ResolveField()
+    @ResolveField(() => MethodModel)
     async invokedBy(
         @Parent() instructionModel: InstructionModel,
         @Context() ctx: RequestContext,
@@ -78,7 +78,7 @@ export class InstructionResolver {
         return transformMethodEntity(method)[0]
     }
 
-    @ResolveField()
+    @ResolveField(() => VariableModelConnection)
     async enteringVariables(
         @Parent() instructionModel: InstructionModel,
         @Context() ctx: RequestContext,
@@ -92,7 +92,7 @@ export class InstructionResolver {
         return paginate(variable, args, transformLocalVariableEntity)
     }
 
-    @ResolveField()
+    @ResolveField(() => VariableModelConnection)
     async exitingVariables(
         @Parent() instructionModel: InstructionModel,
         @Context() ctx: RequestContext,
