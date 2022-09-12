@@ -1,5 +1,11 @@
-import { Field, ObjectType } from '@nestjs/graphql'
-import { Paginated } from 'src/util/paginationUtil'
+import {
+    ArgsType,
+    Field,
+    InputType,
+    ObjectType,
+    PickType,
+} from '@nestjs/graphql'
+import { Paginated, PaginationArgs } from 'src/util/paginationUtil'
 
 @ObjectType()
 export class ClassModel {
@@ -24,3 +30,16 @@ export class ClassModel {
 
 @ObjectType()
 export class ClassModelConnection extends Paginated(ClassModel) {}
+
+@InputType()
+export class ClassModelFilterInput extends PickType(
+    ClassModel,
+    ['name', 'packageName'],
+    InputType,
+) {}
+
+@ArgsType()
+export class ClassModelFilter extends PaginationArgs {
+    @Field(() => ClassModelFilterInput, { nullable: true })
+    filter?: ClassModelFilterInput
+}

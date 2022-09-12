@@ -15,6 +15,14 @@ export class ReferenceEntityService {
         private fieldRepo: Repository<FieldEntity>,
     ) {}
 
+    async findMethod(id: string): Promise<MethodEntity> {
+        return this.methodRepo.findOne({ where: { id }, cache: true })
+    }
+
+    async findField(id: string): Promise<FieldEntity> {
+        return this.fieldRepo.findOne({ where: { id }, cache: true })
+    }
+
     async findOwnerForMethodIds(ids: string[]): Promise<AbstractClassEntity[]> {
         const methods = await this.methodRepo.find({
             where: { id: In(ids) },

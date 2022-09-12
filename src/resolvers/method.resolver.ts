@@ -1,4 +1,11 @@
-import { Args, Context, Parent, ResolveField, Resolver } from '@nestjs/graphql'
+import {
+    Args,
+    Context,
+    Parent,
+    Query,
+    ResolveField,
+    Resolver,
+} from '@nestjs/graphql'
 import { InstructionEntity } from 'src/entities/instruction.entity'
 import { ClassModel } from 'src/models/class.model'
 import {
@@ -7,14 +14,22 @@ import {
 } from 'src/models/instruction.model'
 import { MethodModel } from 'src/models/method.model'
 import { VariableModelConnection } from 'src/models/variable.model'
+import { ReferenceEntityService } from 'src/services/referenceEntity.service'
 import { RequestContext } from 'src/util/context'
 import { paginate, PaginationArgs } from 'src/util/paginationUtil'
-import { transformClassEntity } from './class.resolver'
+import { transformClassEntity, transformMethodEntity } from './class.resolver'
 import { transformLocalVariableEntity } from './instruction.resolver'
 
 @Resolver(() => MethodModel)
 export class MethodResolver {
-    // TODO: Toplevel search for methods
+    constructor(private readonly referenceService: ReferenceEntityService) {}
+
+    @Query(() => MethodModel)
+    async method(@Args('id') id: string): Promise<MethodModel> {
+        const method = await this.referenceService.findMethod(id)
+
+        return transformMethodEntity(method)[0]
+    }
 
     @ResolveField(() => VariableModelConnection)
     async variables(

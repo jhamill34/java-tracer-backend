@@ -1,6 +1,5 @@
 import {
     Args,
-    CONTEXT,
     Context,
     Parent,
     Query,
@@ -9,7 +8,11 @@ import {
 } from '@nestjs/graphql'
 import { MethodEntity } from 'src/entities/method.entity'
 import { KnownClassEntity } from 'src/entities/knownClass.entity'
-import { ClassModel, ClassModelConnection } from 'src/models/class.model'
+import {
+    ClassModel,
+    ClassModelConnection,
+    ClassModelFilter,
+} from 'src/models/class.model'
 import { FieldModel, FieldModelConnection } from 'src/models/field.model'
 import { MethodModel, MethodModelConnection } from 'src/models/method.model'
 import { ClassService } from 'src/services/class.service'
@@ -28,20 +31,23 @@ import { RequestContext } from 'src/util/context'
 export class ClassResolver {
     constructor(private readonly classService: ClassService) {}
 
-    // TODO: Top level search for classes
-
     @Query(() => ClassModel)
-    async getClass(@Args('name') name: string): Promise<ClassModel> {
-        const klass = await this.classService.findByName(name)
+    async class(@Args('id') id: string): Promise<ClassModel> {
+        const klass = await this.classService.findById(id)
+        return transformClassEntity(klass)[0]
+    }
 
-        const model: ClassModel = { ...klass }
-        if (klass instanceof KnownClassEntity) {
-            model.modifiers = translateClassAccess(klass.modifiers)
-        } else {
-            model.modifiers = []
-        }
+    @Query(() => ClassModelConnection)
+    async classes(
+        @Args() args: ClassModelFilter,
+    ): Promise<ClassModelConnection> {
+        const { filter } = args
+        const klasses = await this.classService.find(
+            filter?.name,
+            filter?.packageName,
+        )
 
-        return model
+        return paginate(klasses, args, transformClassEntity)
     }
 
     @ResolveField(() => MethodModelConnection)

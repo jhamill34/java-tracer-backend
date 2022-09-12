@@ -6,7 +6,7 @@ import { ImplementsEntity } from 'src/entities/closures/implements.entity'
 import { KnownClassEntity } from 'src/entities/knownClass.entity'
 import { UnknownClassEntity } from 'src/entities/unknownClass.entity'
 import { reduceBatch } from 'src/util/dataloaderUtil'
-import { In, Repository } from 'typeorm'
+import { In, Like, Repository } from 'typeorm'
 
 @Injectable()
 export class ClassService {
@@ -21,16 +21,49 @@ export class ClassService {
         private implementsRepo: Repository<ImplementsEntity>,
     ) {}
 
-    async findByName(name: string): Promise<AbstractClassEntity> {
+    async findById(id: string): Promise<AbstractClassEntity> {
         let entity: AbstractClassEntity = await this.knownClassRepo.findOne({
-            where: { name },
+            where: { id },
             cache: true,
         })
-        if (entity === undefined || entity === null) {
-            entity = await this.unknownClassRepo.findOneBy({ name })
+
+        if (!entity) {
+            entity = await this.unknownClassRepo.findOne({
+                where: { id },
+                cache: true,
+            })
         }
 
         return entity
+    }
+
+    async find(
+        name?: string,
+        packageName?: string,
+    ): Promise<AbstractClassEntity[]> {
+        const knownEntities: AbstractClassEntity[] =
+            await this.knownClassRepo.find({
+                where: {
+                    name: name ? Like(name) : Like('%'),
+                    packageName: packageName ? Like(packageName) : Like('%'),
+                },
+                order: { id: 'asc' },
+                cache: true,
+            })
+
+        let unknownEntities = []
+        if (!packageName) {
+            unknownEntities = await this.unknownClassRepo.find({
+                where: {
+                    name: name ? Like(name) : Like('%'),
+                },
+                order: { id: 'asc' },
+                cache: true,
+            })
+        }
+
+        // We can do this because unknown entities have a value prefixed with 'u'
+        return [...knownEntities, ...unknownEntities]
     }
 
     async findSubClassesForClasses(

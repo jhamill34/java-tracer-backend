@@ -16,14 +16,17 @@ export class PageInfo {
     @Field(() => Boolean)
     hasNextPage: boolean
 
-    @Field()
-    startCursor: string
+    @Field({ nullable: true })
+    startCursor?: string
 
-    @Field()
-    endCursor: string
+    @Field({ nullable: true })
+    endCursor?: string
 
     @Field(() => Boolean)
     forward: boolean
+
+    @Field(() => Int)
+    returned: number
 }
 
 export function Paginated<T>(classRef: Type<T>): Type<Connection<T>> {
@@ -70,7 +73,7 @@ export function paginate<E, T>(
 ): Connection<T> {
     const { first, after, last, before } = args
     let reverse = false
-    let limit = first || 10
+    let limit = first
     let token = after || ''
 
     if (!first && !after) {
@@ -79,8 +82,17 @@ export function paginate<E, T>(
         token = before || token
     }
 
-    if (entities.length === 0) {
-        return null
+    if (!entities || entities.length === 0) {
+        return {
+            edges: [],
+            pageInfo: {
+                hasNextPage: false,
+                startCursor: null,
+                endCursor: null,
+                forward: true,
+                returned: 0,
+            },
+        }
     }
 
     let edges = entities
@@ -96,7 +108,7 @@ export function paginate<E, T>(
             }
         })
 
-    const hasNextPage = edges.length > limit
+    const hasNextPage = limit ? edges.length > limit : false
     if (hasNextPage) {
         if (reverse) {
             edges = edges.slice(-limit)
@@ -112,6 +124,7 @@ export function paginate<E, T>(
             startCursor: edges.at(0).cursor,
             endCursor: edges.at(-1).cursor,
             forward: !reverse,
+            returned: edges.length,
         },
     }
 }
