@@ -58,6 +58,20 @@ export class MethodResolver {
         return paginate(instructions, args, transformInstructionEntity)
     }
 
+    @ResolveField(() => InstructionModelConnection)
+    async invokers(
+        @Parent() method: MethodModel,
+        @Context() ctx: RequestContext,
+        @Args() args: PaginationArgs,
+    ): Promise<InstructionModelConnection> {
+        const instructions =
+            await ctx.loaders.instructionLoaders.instructionsCallingMethodLoader.load(
+                method.id,
+            )
+
+        return paginate(instructions, args, transformInstructionEntity)
+    }
+
     @ResolveField(() => ClassModel)
     async owner(
         @Parent() method: MethodModel,

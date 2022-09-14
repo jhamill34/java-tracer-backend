@@ -42,10 +42,7 @@ export class ClassResolver {
         @Args() args: ClassModelFilter,
     ): Promise<ClassModelConnection> {
         const { filter } = args
-        const klasses = await this.classService.find(
-            filter?.name,
-            filter?.packageName,
-        )
+        const klasses = await this.classService.find(filter?.name)
 
         return paginate(klasses, args, transformClassEntity)
     }
@@ -75,7 +72,7 @@ export class ClassResolver {
         return paginate(field, args, transformFieldEntity)
     }
 
-    @ResolveField(() => ClassModel)
+    @ResolveField(() => ClassModel, { nullable: true })
     async superClass(
         @Parent() klass: ClassModel,
         @Context() ctx: RequestContext,
@@ -84,7 +81,11 @@ export class ClassResolver {
             klass.id,
         )
 
-        return transformClassEntity(result[0])[0]
+        if (result != null && result.length > 0) {
+            return transformClassEntity(result[0].ancestor)[0]
+        }
+
+        return null
     }
 
     @ResolveField(() => ClassModelConnection)
@@ -97,7 +98,11 @@ export class ClassResolver {
             klass.id,
         )
 
-        return paginate(result, args, transformClassEntity)
+        return paginate(
+            result?.map((e) => e.child) ?? [],
+            args,
+            transformClassEntity,
+        )
     }
 
     @ResolveField(() => ClassModelConnection)
@@ -110,7 +115,11 @@ export class ClassResolver {
             klass.id,
         )
 
-        return paginate(result, args, transformClassEntity)
+        return paginate(
+            result?.map((e) => e.child) ?? [],
+            args,
+            transformClassEntity,
+        )
     }
 
     @ResolveField(() => ClassModelConnection)
@@ -123,7 +132,11 @@ export class ClassResolver {
             klass.id,
         )
 
-        return paginate(result, args, transformClassEntity)
+        return paginate(
+            result?.map((e) => e.ancestor) ?? [],
+            args,
+            transformClassEntity,
+        )
     }
 }
 

@@ -37,30 +37,23 @@ export class ClassService {
         return entity
     }
 
-    async find(
-        name?: string,
-        packageName?: string,
-    ): Promise<AbstractClassEntity[]> {
-        const knownEntities: AbstractClassEntity[] =
-            await this.knownClassRepo.find({
-                where: {
-                    name: name ? Like(name) : Like('%'),
-                    packageName: packageName ? Like(packageName) : Like('%'),
-                },
-                order: { id: 'asc' },
-                cache: true,
-            })
+    async find(name?: string): Promise<AbstractClassEntity[]> {
+        const knownEntities: AbstractClassEntity[] = await this.knownClassRepo
+            .createQueryBuilder('klass')
+            .where('klass.name <-> :name < 0.9')
+            .orderBy('klass.name <-> :name', 'ASC')
+            .setParameter('name', name)
+            .cache(true)
+            .getMany()
 
         let unknownEntities = []
-        if (!packageName) {
-            unknownEntities = await this.unknownClassRepo.find({
-                where: {
-                    name: name ? Like(name) : Like('%'),
-                },
-                order: { id: 'asc' },
-                cache: true,
-            })
-        }
+        unknownEntities = await this.unknownClassRepo
+            .createQueryBuilder('klass')
+            .where('klass.name <-> :name < 0.9')
+            .orderBy('klass.name <-> :name', 'ASC')
+            .setParameter('name', name)
+            .cache(true)
+            .getMany()
 
         // We can do this because unknown entities have a value prefixed with 'u'
         return [...knownEntities, ...unknownEntities]
@@ -68,12 +61,11 @@ export class ClassService {
 
     async findSubClassesForClasses(
         classIds: string[],
-    ): Promise<AbstractClassEntity[][]> {
+    ): Promise<ExtendsEntity[][]> {
         const extended = await this.extendsRepo.find({
             where: {
                 ancestorId: In(classIds),
             },
-            order: { childId: 'asc' },
             relations: {
                 child: true,
             },
@@ -84,16 +76,12 @@ export class ClassService {
             return []
         }
 
-        return reduceBatch(
-            classIds,
-            extended.map((e) => e.child),
-            (e) => e.id,
-        )
+        return reduceBatch(classIds, extended, (e) => e.ancestorId)
     }
 
     async findSuperClassForClasses(
         classIds: string[],
-    ): Promise<AbstractClassEntity[][]> {
+    ): Promise<ExtendsEntity[][]> {
         const extended = await this.extendsRepo.find({
             where: {
                 childId: In(classIds),
@@ -104,16 +92,12 @@ export class ClassService {
             cache: true,
         })
 
-        return reduceBatch(
-            classIds,
-            extended.map((e) => e.ancestor),
-            (e) => e.id,
-        )
+        return reduceBatch(classIds, extended, (e) => e.childId)
     }
 
     async findImplementorsForClasses(
         classIds: string[],
-    ): Promise<AbstractClassEntity[][]> {
+    ): Promise<ImplementsEntity[][]> {
         const extended = await this.implementsRepo.find({
             where: {
                 ancestorId: In(classIds),
@@ -129,16 +113,12 @@ export class ClassService {
             return []
         }
 
-        return reduceBatch(
-            classIds,
-            extended.map((e) => e.child),
-            (e) => e.id,
-        )
+        return reduceBatch(classIds, extended, (e) => e.ancestorId)
     }
 
     async findImplementedForClasses(
         classIds: string[],
-    ): Promise<AbstractClassEntity[][]> {
+    ): Promise<ImplementsEntity[][]> {
         const extended = await this.implementsRepo.find({
             where: {
                 childId: In(classIds),
@@ -154,10 +134,6 @@ export class ClassService {
             return []
         }
 
-        return reduceBatch(
-            classIds,
-            extended.map((e) => e.ancestor),
-            (e) => e.id,
-        )
+        return reduceBatch(classIds, extended, (e) => e.childId)
     }
 }

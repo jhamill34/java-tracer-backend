@@ -89,6 +89,22 @@ export class InstructionService {
         return reduceBatch(methodIds, instr, (i) => i.invokedById)
     }
 
+    async findAllInstructionsCallingMethods(
+        methodIds: string[]
+    ): Promise<InstructionEntity[][]> {
+        const instr = await this.instructionRepo.find({
+            where: {
+                referenceId: In(methodIds),
+            },
+            order: {
+                id: 'asc'
+            },
+            cache: true
+        })
+
+        return reduceBatch(methodIds, instr, (i) => i.referenceId)
+    }
+
     async findNextByInstructionIds(
         instrIds: string[],
     ): Promise<InstructionClosureEntity[][]> {

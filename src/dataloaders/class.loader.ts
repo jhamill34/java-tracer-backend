@@ -1,12 +1,13 @@
 import DataLoader from 'dataloader'
-import { AbstractClassEntity } from 'src/entities/abstractClass.entity'
+import { ExtendsEntity } from 'src/entities/closures/extends.entity'
+import { ImplementsEntity } from 'src/entities/closures/implements.entity'
 import { ClassService } from 'src/services/class.service'
 
 export class ClassDataLoader {
-    readonly subClassLoader: DataLoader<string, AbstractClassEntity[]>
-    readonly superClassLoader: DataLoader<string, AbstractClassEntity[]>
-    readonly implementorLoader: DataLoader<string, AbstractClassEntity[]>
-    readonly implementedLoader: DataLoader<string, AbstractClassEntity[]>
+    readonly subClassLoader: DataLoader<string, ExtendsEntity[]>
+    readonly superClassLoader: DataLoader<string, ExtendsEntity[]>
+    readonly implementorLoader: DataLoader<string, ImplementsEntity[]>
+    readonly implementedLoader: DataLoader<string, ImplementsEntity[]>
 
     constructor(classService: ClassService) {
         this.subClassLoader = new DataLoader(

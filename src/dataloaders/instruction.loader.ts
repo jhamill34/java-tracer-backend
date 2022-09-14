@@ -11,6 +11,10 @@ export class InstructionDataLoader {
     readonly exitingVariablesLoader: DataLoader<string, LocalVariableEntity[]>
     readonly referencesLoader: DataLoader<string, ReferenceEntity>
     readonly fromInvokedByLoader: DataLoader<string, InstructionEntity[]>
+    readonly instructionsCallingMethodLoader: DataLoader<
+        string,
+        InstructionEntity[]
+    >
     readonly invokedByLoader: DataLoader<string, MethodEntity>
     readonly nextLoader: DataLoader<string, InstructionClosureEntity[]>
     readonly previousLoader: DataLoader<string, InstructionClosureEntity[]>
@@ -39,6 +43,12 @@ export class InstructionDataLoader {
         this.invokedByLoader = new DataLoader(
             async (keys: string[]) =>
                 await instructionService.findInvokedForInstructionIds(keys),
+        )
+        this.instructionsCallingMethodLoader = new DataLoader(
+            async (keys: string[]) =>
+                await instructionService.findAllInstructionsCallingMethods(
+                    keys,
+                ),
         )
         this.nextLoader = new DataLoader(
             async (keys: string[]) =>

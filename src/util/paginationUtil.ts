@@ -121,8 +121,8 @@ export function paginate<E, T>(
         edges,
         pageInfo: {
             hasNextPage,
-            startCursor: edges.at(0).cursor,
-            endCursor: edges.at(-1).cursor,
+            startCursor: edges.at(0)?.cursor ?? null,
+            endCursor: edges.at(-1)?.cursor ?? null,
             forward: !reverse,
             returned: edges.length,
         },

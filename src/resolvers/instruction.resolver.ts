@@ -47,7 +47,7 @@ export class InstructionResolver {
         return []
     }
 
-    @ResolveField(() => ReferenceModel)
+    @ResolveField(() => ReferenceModel, { nullable: true })
     async reference(
         @Parent() instructionModel: InstructionModel,
         @Context() ctx: RequestContext,
@@ -78,7 +78,7 @@ export class InstructionResolver {
         return transformMethodEntity(method)[0]
     }
 
-    @ResolveField(() => VariableModelConnection)
+    @ResolveField(() => VariableModelConnection, { nullable: true })
     async enteringVariables(
         @Parent() instructionModel: InstructionModel,
         @Context() ctx: RequestContext,
@@ -92,7 +92,7 @@ export class InstructionResolver {
         return paginate(variable, args, transformLocalVariableEntity)
     }
 
-    @ResolveField(() => VariableModelConnection)
+    @ResolveField(() => VariableModelConnection, { nullable: true })
     async exitingVariables(
         @Parent() instructionModel: InstructionModel,
         @Context() ctx: RequestContext,
